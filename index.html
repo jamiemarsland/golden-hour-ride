@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Golden Hour Ride</title>
+<link rel="icon" href="data:,">
 <style>
   html, body { margin: 0; height: 100%; background: #0b0a09; overflow: hidden; }
   body { font: 500 14px/1.2 -apple-system, "Helvetica Neue", Helvetica, Arial, sans-serif; color: #fff; }
@@ -22,6 +23,13 @@
     border-radius: 999px; padding: 7px 13px; cursor: pointer; backdrop-filter: blur(6px); }
   #ctl button:hover { background: rgba(20,16,12,.7); }
   #ctl button.on { background: rgba(255,255,255,.3); border-color: #fff; }
+  #settings { position: fixed; inset: 54px 18px auto auto; margin: 0; box-sizing: border-box;
+    width: min(310px, calc(100vw - 36px)); max-height: calc(100dvh - 76px); overflow: auto;
+    padding: 16px; color: #fff; background: #252520; border: 1px solid #67675b; border-radius: 14px; }
+  #settings header { display: flex; justify-content: space-between; align-items: center; }
+  #settings h2 { margin: 0; font-size: 16px; }
+  #settings h3 { margin: 16px 0 8px; font-size: 12px; color: #e5cea9; }
+  #settings #wx, #settings #hills { flex-wrap: wrap; margin-top: 8px; }
   #wx { display: flex; gap: 4px; }
   #hills { display: flex; gap: 4px; align-items: center; }
   #hills button { min-width: 30px; padding-left: 0; padding-right: 0; }
@@ -41,12 +49,8 @@
   body.clean { cursor: none; }
   #credit { position: fixed; right: 14px; bottom: 10px; font-size: 10px; letter-spacing: .04em; opacity: .7; text-shadow: 0 1px 6px rgba(0,0,0,.7); max-width: 46vw; text-align: right; }
 </style>
-<script type="importmap">
-{ "imports": {
-  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
-  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
-} }
-</script>
+<link rel="stylesheet" href="ride.css">
+<script src="vendor/three-0.160.0/ride-three.min.js"></script>
 </head>
 <body>
 <canvas id="c"></canvas>
@@ -61,27 +65,72 @@
   <input id="pwr" type="range" min="0" max="600" step="5" value="220" aria-label="Power in watts">
   <span>↑ ↓ keys</span>
   <button id="skip" title="Jump 250 m up the road (→ key; ← goes back)">Skip 250 m ›</button>
+  <button id="clean" title="Hide everything on screen (H key, or say “hide”). Press H, click, or say “show” to bring it back">Hide info</button>
+  <button id="worldButton">Worlds</button>
+  <button id="startWorkout">Workouts</button>
+  <details id="climbNav" hidden><summary>Jump to…</summary><div><button id="toBottom">Bottom</button><button id="toLake">Lake access · Lac de Bethmale</button><button id="toSummit">Summit</button></div></details>
+  <button id="turnAround">Turn around</button>
+  <button id="logbtn" title="Distance you have ridden, kept in this browser">History</button>
+  <button id="settingsButton" popovertarget="settings">Settings</button>
+  <section id="settings" popover aria-label="Ride settings">
+    <header><h2>Ride settings</h2><button popovertarget="settings" popovertargetaction="hide" aria-label="Close settings">×</button></header>
+    <h3>Audio and voice</h3>
+  <button id="sound" aria-pressed="false" title="Toggle wind, tyres and rain">Sound: off</button>
+  <label><input type="checkbox" id="windNoise"> Wind noise</label>
   <button id="voice" title="Say: rain, mist, overcast, sunny, skip, back, hide or show. For a smart trainer: easier or gear down, harder or gear up, flat, full">Voice: off</button>
-  <button id="course" title="Switch between the invented valley and the real Leckhampton Hill loop">Course</button>
+    <label><input type="checkbox" id="summitVoice" checked> Speak summit results</label>
+    <h3>Weather</h3>
   <span id="wx"><button data-w="snow">Snow</button><button data-w="golden" class="on">Golden</button><button data-w="overcast">Overcast</button><button data-w="rain">Rain</button><button data-w="mist">Mist</button><button data-w="starry">Starry</button></span>
+    <h3>Trainer</h3>
   <button id="bt">Connect trainer</button>
   <span id="hills" title="How much of each hill a smart trainer makes you feel. Turn it down if the climbs are too hard; 0 % is flat."><button id="hless" aria-label="Make hills easier">−</button><span id="hval">Hills 50 %</span><button id="hmore" aria-label="Make hills harder">+</button></span>
-  <button id="clean" title="Hide everything on screen (H key, or say “hide”). Press H, click, or say “show” to bring it back">Hide info</button>
-  <button id="logbtn" title="Distance you have ridden, kept in this browser">Log</button>
+    <label><input type="checkbox" id="erg" disabled> ERG workout resistance</label><small id="ergNote">Connect an ERG-capable trainer</small>
+    <label>Rider + bike weight (kg) <input type="number" id="rideMass" min="20" max="350" step="0.1" value="80" aria-describedby="rideMassHelp"></label><small id="rideMassHelp">Used for road speed and climbing.</small>
+    <h3>Ride display</h3>
+    <label>Graphics <select id="graphicsQuality"><option value="auto">Automatic</option><option value="smooth">Smoother motion</option><option value="detail">Full detail</option></select></label>
+    <label><input type="checkbox" id="ghostToggle"> Compare with last lap</label>
+    <label><input type="checkbox" id="profileToggle" checked> Show elevation preview</label>
+    <label id="parkPlacesSetting" hidden><input type="checkbox" id="parkPlacesToggle"> Show upcoming Richmond places</label>
+  </section>
 </div>
-<div id="log" hidden></div>
-<div id="credit"></div>
-<div id="loading">Building the valley…</div>
+<div id="rideExtras"><section id="climbStatus" hidden><strong id="climbSide"></strong><div id="climbTime"></div><div id="climbBest"></div><div id="climbSplit"></div><div id="climbResult" role="status"></div><button id="visitShore" hidden aria-haspopup="dialog">View lakeshore</button><button id="descendPass" hidden>Descend the other side</button></section>
+  <section id="richmondSection" aria-label="Timed Richmond Park section" hidden></section>
+  <section id="sessionStatus" hidden><strong id="intervalName"></strong><span id="intervalTime"></span><div class="workoutWatts"><div><span>Target power</span><b id="targetPower"></b></div><div><span id="actualLabel"></span><b id="actualPower"></b></div><div id="cadenceMetric" hidden><span>Cadence</span><b id="cadenceValue"></b></div></div>
+    <div><span>Elapsed <b id="workoutElapsed"></b></span><span id="remainingLabel">Workout left <b id="workoutRemaining"></b></span></div>
+    <div id="intensityControls" role="group" aria-label="Workout intensity" hidden>Intensity <button id="intensityDown" aria-label="Decrease workout intensity by 5 percent">−</button><output id="intensityValue">100%</output><button id="intensityUp" aria-label="Increase workout intensity by 5 percent">+</button><button id="intensityReset">Reset</button></div>
+    <div id="workoutSteps"><div id="upNextLabel"></div><div id="upcomingSteps"></div></div>
+    <div class="rideActions"><button id="prevStep" aria-label="Previous workout step">‹ Step</button><button id="nextStep" aria-label="Next workout step">Step ›</button><button id="pauseWorkout">Pause</button><button id="finishWorkout">Finish &amp; save</button></div></section>
+  <div id="terrainStrip"><span id="profileText">Next kilometre</span> <button id="showRouteMap">Map</button><canvas id="profile" width="280" height="52" aria-label="Elevation over the next kilometre"></canvas><div id="profileMetrics"></div><div id="parkPlaceCue" hidden></div></div>
+  <div id="ghostReadout" hidden></div><div id="sessionNotice" role="status"></div>
+</div>
+<dialog id="lakeView" aria-labelledby="lakeViewName"><div><strong id="lakeViewName">Lac de Bethmale</strong><span>Ride paused at lake access</span></div><button id="returnFromLake" autofocus>Return to bike</button></dialog>
+<dialog aria-labelledby="studioTitle" id="studio" class="ridePanel"><header><h2 id="studioTitle">Workouts</h2><button id="studioClose" aria-label="Close workouts">Close</button></header><div id="studioBody"></div></dialog>
+<dialog class="ridePanel" id="routeMap" aria-labelledby="mapTitle"><header><h2 id="mapTitle">Route map</h2><button id="mapClose">Close</button></header><canvas id="mapCanvas" width="600" height="330" role="img" aria-label="North-up map with current riding position and direction"></canvas><ol id="mapLegend"></ol><p id="mapSummary"></p><a id="mapGpx" hidden download></a></dialog>
+<dialog aria-label="Choose a world" id="worlds" class="ridePanel"><header><h2>Choose a world</h2><button id="worldClose">Close</button></header><div class="worldGrid" id="worldCards"></div><div class="worldFoot"><label><span id="directionLabel">Direction</span> <select id="direction"><option value="forward">Forward</option><option value="reverse">Reverse</option></select></label><button class="primary" id="enterWorld">Ride this world</button></div></dialog>
+<button id="credit" aria-haspopup="dialog" hidden>© OpenStreetMap · Sources</button>
+<dialog id="graphicsRecovery" class="ridePanel" aria-labelledby="graphicsTitle"><header><h2 id="graphicsTitle">Ride paused</h2></header><p id="graphicsMessage" role="status"></p><button id="continueGraphics" hidden>Continue ride</button> <button id="reloadGraphics">Reload game</button></dialog>
+<dialog id="sources" class="ridePanel" aria-labelledby="sourcesTitle"><header><h2 id="sourcesTitle">Course sources</h2><button id="sourcesClose">Close</button></header><p id="courseSources"></p><div id="sourceLinks"></div></dialog>
+<div id="loading">Loading ride…</div>
 
+<script src="route-map.js"></script>
+<script src="trainer-telemetry.js"></script>
+<script src="road-models.js"></script>
+<script src="traffic.js"></script>
+<script src="ride-motion.js"></script>
+<script src="mountain-terrain.js"></script>
+<script src="core-villages.js"></script>
+<script src="lake-access.js"></script>
+<script src="lake-view.js"></script>
+<script src="woodland-crowns.js"></script>
+<script src="richmond-park.js"></script>
+<script src="richmond-segments.js"></script>
+<script src="ride-power-bests.js"></script>
+<script src="ride-export.js"></script>
+<script src="elevation-preview.js"></script>
+<script src="history-files.js"></script>
+<script src="training.js"></script>
 <script type="module">
-import * as THREE from 'three';
-import { Sky } from 'three/addons/objects/Sky.js';
-import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
-import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
-import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
-import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
-import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
-import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+const { THREE, Sky, EffectComposer, RenderPass, UnrealBloomPass, ShaderPass, OutputPass, mergeGeometries } = window.RideThree;
 
 const V3 = THREE.Vector3;
 const $ = id => document.getElementById(id);
@@ -105,6 +154,33 @@ function ridged(x, y, o = 4) {       // sharp crests and gullies, for mountains
 const smooth = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
 const canvas2d = (w, h) => { const c = document.createElement('canvas'); c.width = w; c.height = h; return [c, c.getContext('2d')]; };
 
+const params = new URLSearchParams(location.search);
+const worlds = {core:['Col de la Core','French Pyrenees · two summit climbs'],valley:['Golden Valley','Alpine scenery · fictional loop'],richmond:['Richmond Park','London · surveyed park roads'],leckhampton:['Leckhampton Hill','Cotswolds · surveyed hill loop']};
+const RICHMOND_DATA_VERSION=5;
+const COURSE = Object.hasOwn(worlds,params.get('course')) ? params.get('course') : 'valley';
+let reverse = params.get('direction') === 'reverse';
+const openRoad=COURSE==='core',startFromBethmale=openRoad && reverse;
+let turned=startFromBethmale;
+const roadPosition=s=>turned?(openRoad?LEN-s:(LEN-s)%LEN):s;
+const bounded=s=>openRoad?Math.max(0,Math.min(LEN,s)):((s%LEN)+LEN)%LEN;
+const loading = $('loading');
+function showArrival(el,id) {
+  el.style.backgroundImage="linear-gradient(0deg,#0d1b16ee,#10231d55),url(assets/preview-"+id+".jpg)";
+  el.style.backgroundSize="cover";el.style.backgroundPosition="center";
+  const title=document.createElement('strong');title.textContent=worlds[id][0];
+  const detail=document.createElement('span');detail.className='arrivalDetail';detail.textContent='Loading course';
+  const progress=document.createElement('progress');progress.max=4;progress.value=0;
+  progress.setAttribute('aria-label','Loading '+worlds[id][0]);
+  el.replaceChildren(title,detail,progress);
+}
+showArrival(loading,COURSE);
+async function loadingStage(value,text){
+  loading.querySelector('progress').value=value;
+  loading.querySelector('.arrivalDetail').textContent=text;
+  // Yield during construction so that both the transition and browser remain responsive.
+  await new Promise(resolve=>setTimeout(resolve,16));
+}
+
 /* ---------- photo-scanned surfaces (Poly Haven, CC0) ---------- */
 const loadImg = src => new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = () => rej(new Error('missing texture')); i.src = src; });
 const TEX = ['asphalt_02_diff_2k', 'asphalt_02_nor_gl_2k', 'leafy_grass_diff_2k', 'leafy_grass_nor_gl_1k', 'rock_face_03_diff_1k', 'gravel_ground_01_diff_1k'];
@@ -124,23 +200,23 @@ const imgTex = (img, srgb) => {
 
 /* ---------- renderer ---------- */
 const renderer = new THREE.WebGLRenderer({ canvas: $('c'), antialias: false, powerPreference: 'high-performance' });
-renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+const qualitySelect=$('graphicsQuality');
+try {
+  const saved=localStorage.getItem('ride-graphics');
+  if(['smooth','detail'].includes(saved))qualitySelect.value=saved;
+} catch {}
+let smoothGraphics=qualitySelect.value==='smooth';
+const renderRatio=()=>smoothGraphics?Math.min(devicePixelRatio,1)*0.85:Math.min(devicePixelRatio,2);
+const uPx={value:innerHeight*renderRatio()/(2*Math.tan(0.6))};
+renderer.setPixelRatio(renderRatio());
 renderer.setSize(innerWidth, innerHeight);
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 0.33;
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 const MAX_ANISO = renderer.capabilities.getMaxAnisotropy();
-$('c').addEventListener('webglcontextlost', e => {
-  e.preventDefault(); console.warn('ride: graphics context lost');
-  const b = document.createElement('div'); b.id = 'lost'; b.textContent = 'Graphics were reset by the browser. Reloading…';
-  b.style.cssText = 'position:fixed;inset:0;display:grid;place-items:center;background:rgba(10,9,8,.8);letter-spacing:.1em;font-size:13px';
-  document.body.append(b);
-  setTimeout(() => location.reload(), 1500);
-});
-
 const scene = new THREE.Scene();
-const camera = new THREE.PerspectiveCamera(64, innerWidth / innerHeight, 0.05, 9000);
+const camera = new THREE.PerspectiveCamera(64, innerWidth / innerHeight, openRoad ? .08 : .05, openRoad ? 56000 : 9000);
 scene.add(camera);
 
 /* ---------- sky, sun, haze ---------- */
@@ -185,7 +261,7 @@ scene.fog = new THREE.FogExp2(hazeCol, 0.0007);
 
 const sun = new THREE.DirectionalLight(0xffb070, 10);
 sun.castShadow = true;
-sun.shadow.mapSize.set(4096, 4096);
+sun.shadow.mapSize.set(2048, 2048);
 Object.assign(sun.shadow.camera, { left: -110, right: 110, top: 110, bottom: -110, near: 1, far: 700 });
 sun.shadow.bias = -0.0004;
 sun.shadow.normalBias = 0.6;
@@ -194,31 +270,83 @@ const hemi = new THREE.HemisphereLight(XMAS ? 0xa6b4ea : 0xa9b8ee, XMAS ? 0x9aa2
 scene.add(hemi);
 
 /* ---------- course: the invented valley, or a real road built from survey data ---------- */
-const COURSE = new URLSearchParams(location.search).get('course') === 'leckhampton' ? 'leckhampton' : 'valley';
 // Scenery mode (?scenery): the ride drifts along on its own at a gentle pace with nothing on screen and the weather
 // slowly changing, for leaving on in the background. ?scenery=nobars also hides the handlebars.
 const SCENERY = new URLSearchParams(location.search).get('scenery');
 let real = null;
 if (COURSE !== 'valley') {
-  $('loading').textContent = 'Building Leckhampton Hill…';
+
   const addScript = src => new Promise((res, rej) => { const s = document.createElement('script'); s.src = src; s.onload = res; s.onerror = () => rej(new Error('missing ' + src)); document.head.append(s); });
-  const DATA = 3;          // bump when the course files change, so browsers don't reuse an old copy
+  const DATA = COURSE==='richmond'?RICHMOND_DATA_VERSION:3;
   await addScript(`assets/${COURSE}.js?v=${DATA}`);
-  await addScript(`assets/${COURSE}_osm.js?v=${DATA}`).catch(() => {});          // buildings, woods and hedges are optional
+  if (COURSE === 'leckhampton') await addScript(`assets/${COURSE}_osm.js?v=${DATA}`).catch(() => {});          // buildings, woods and hedges are optional
+  if(openRoad)await Promise.all(['assets/core-scenery.js','assets/core-woodland.js'].map(addScript));
+  if(COURSE==='richmond'){
+    await addScript(`assets/richmond-scenery.js?v=${DATA}`);
+    if(location.protocol==='file:')await addScript(`assets/richmond-ground.js?v=${DATA}`);
+  }
   real = window.RIDE_COURSES[COURSE];
+  if(real.details)real.osm.buildings=real.details.buildings;
   real.osm = real.osm || { buildings: [], trees: [], lines: [], woods: '', credit: '' };
+  if(real.scenery)real.osm.buildings=real.scenery.buildings;
   const wb = Uint8Array.from(atob(real.osm.woods), c => c.charCodeAt(0));
   real.wood = (x, z) => {                 // is this spot mapped as woodland?
     const g = real.cells, ix = Math.round((x + real.size / 2) / (real.size / g)), iz = Math.round((z + real.size / 2) / (real.size / g));
     if (ix < 0 || iz < 0 || ix > g || iz > g) return false;
     const i = iz * (g + 1) + ix; return ((wb[i >> 3] >> (i & 7)) & 1) === 1;
   };
+  if(real.woodland){
+    const {side,size,trees}=real.woodland;
+    const bits=Uint8Array.from(atob(trees),c=>c.charCodeAt(0));
+    real.wood=(x,z)=>{
+      const col=Math.floor((x/size+.5)*side),row=Math.floor((z/size+.5)*side);
+      if(col<0||row<0||col>=side||row>=side)return false;
+      const i=row*side+col;return (bits[i>>3]&(1<<(i%8)))!==0;
+    };
+  }
   const raw = Uint8Array.from(atob(real.dem), c => c.charCodeAt(0)), q = new Uint16Array(raw.buffer);
   real.h = Float32Array.from(q, v => real.demMin + v / 65535 * (real.demMax - real.demMin));     // surveyed ground heights, metres
-  $('credit').textContent = real.credit + ' ' + real.osm.credit;
+  $('credit').hidden=false;
+  $('courseSources').textContent = real.credit + ' ' + real.osm.credit + (real.details?' Canopy heights © Environment Agency LiDAR Vegetation Object Model.':'')+(real.woodland?' Woodland distribution © ESA WorldCover 2021 / CC BY 4.0. Forest types © IGN BD TOPO, Licence Ouverte.':'');
 }
-$('course').textContent = real ? 'Course: Leckhampton' : 'Course: Valley';
-$('course').addEventListener('click', () => { location.search = real ? '' : '?course=leckhampton'; });
+if(real){
+  const sources=[['OpenStreetMap contributors','https://www.openstreetmap.org/copyright']];
+  if(openRoad)sources.push(['IGN BD TOPO','https://geoservices.ign.fr/bdtopo'],['ESA WorldCover 2021','https://doi.org/10.5281/zenodo.7254221'],['Terrain Tiles','https://registry.opendata.aws/terrain-tiles/']);
+  else sources.push(['Environment Agency survey data','https://environment.data.gov.uk/survey']);
+  for(const [label,url] of sources){
+    const link=document.createElement('a');link.href=url;link.textContent=label;link.target='_blank';link.rel='noopener';
+    $('sourceLinks').append(link);
+  }
+  $('credit').onclick=()=>$('sources').showModal();
+  $('sourcesClose').onclick=()=>$('sources').close();
+}
+let chosen=COURSE;
+function chooseWorld(id) {
+  chosen=id;
+  $('directionLabel').textContent=id==='core'?'Start from':'Direction';
+  for(const button of $('worldCards').children)button.setAttribute('aria-pressed',String(button.dataset.world===id));
+  $('direction').options[0].textContent=id==='core'?'From Seix':id==='richmond'?'Clockwise':'Forward';
+  $('direction').options[1].textContent=id==='core'?'From Bethmale valley':id==='richmond'?'Anticlockwise':'Reverse';
+}
+for(const [id,[title,detail]] of Object.entries(worlds)){
+  const card=document.createElement('button');card.dataset.world=id;card.onclick=()=>chooseWorld(id);
+  const img=document.createElement('img');img.src='assets/preview-'+id+'.jpg';img.alt='';
+  const name=document.createElement('strong');name.textContent=title;
+  const desc=document.createElement('small');desc.textContent=detail;
+  card.append(img,name,desc);$('worldCards').append(card);
+}
+$('worldButton').onclick=()=>{chooseWorld(COURSE);$('direction').value=(openRoad?startFromBethmale:reverse)?'reverse':'forward';$('worlds').showModal();};
+$('worldClose').onclick=()=>$('worlds').close();
+$('enterWorld').onclick=async()=>{
+  const back=$('direction').value==='reverse';$('worlds').close();
+  if(chosen===COURSE && back===(openRoad?startFromBethmale:reverse))return;
+  trainingUI.switching();
+  const cover=document.createElement('div');cover.id='loading';showArrival(cover,chosen);document.body.append(cover);
+  const url=new URL(location.href);url.searchParams.set('course',chosen);url.searchParams.set('direction',back?'reverse':'forward');
+  if(chosen!=='valley')url.searchParams.delete('theme');
+  await Promise.all([leaveTrainer(),new Promise(resolve=>setTimeout(resolve,180))]);
+  location.assign(url);
+};
 function demH(x, z) {                 // the real ground under a point
   const g = real.cells, w = g + 1, f = v => Math.min(g - 1e-6, Math.max(0, (v + real.size / 2) / (real.size / g)));
   const fx = f(x), fz = f(z), ix = Math.floor(fx), iz = Math.floor(fz), u = fx - ix, v = fz - iz, h = real.h;
@@ -235,20 +363,28 @@ else for (let i = 0; i < 22; i++) {
   const r = 430 + 110 * Math.sin(a * 3 + 0.6) + 60 * Math.sin(a * 5 + 2.1);
   ctrl.push(new V3(Math.cos(a) * r, 40 + 16 * Math.sin(a * 2 + 1) + 4 * Math.sin(a * 5), Math.sin(a) * r));
 }
-const curve = new THREE.CatmullRomCurve3(ctrl, true, 'centripetal');
+if (reverse && !openRoad) ctrl.splice(1,ctrl.length-1,...ctrl.slice(1).reverse());
+const curve = new THREE.CatmullRomCurve3(ctrl, !openRoad, 'centripetal');
 curve.arcLengthDivisions = Math.max(4000, ctrl.length * 12);
 const LEN = curve.getLength();
 const N = Math.floor(LEN / 1.5);
-const P = curve.getSpacedPoints(N).slice(0, N);
-const T = P.map((_, i) => new V3().subVectors(P[(i + 1) % N], P[(i - 1 + N) % N]).normalize());
+const P = curve.getSpacedPoints(N);
+if(!openRoad)P.pop();
+const pointIndex=i=>openRoad?Math.max(0,Math.min(N,i)):(i+N)%N;
+const T = P.map((_, i) => new V3().subVectors(P[pointIndex(i+1)], P[pointIndex(i-1)]).normalize());
 const R = T.map(t => new V3(-t.z, 0, t.x).normalize());
 
-function at(s, out) {
-  const f = (((s % LEN) + LEN) % LEN) / LEN * N;
-  const i = Math.floor(f) % N, j = (i + 1) % N, k = f - Math.floor(f);
+function basePose(s, out) {
+  const f = bounded(s) / LEN * N;
+  const i = pointIndex(Math.floor(f)), j = pointIndex(i+1), k = f - Math.floor(f);
   out.p.lerpVectors(P[i], P[j], k);
   out.t.lerpVectors(T[i], T[j], k).normalize();
   out.r.set(-out.t.z, 0, out.t.x).normalize();
+  return out;
+}
+function at(s,out){
+  basePose(roadPosition(s),out);
+  if(turned){out.t.negate();out.r.negate();}
   return out;
 }
 const mkPose = () => ({ p: new V3(), t: new V3(), r: new V3() });
@@ -276,8 +412,25 @@ function nearRoad(x, z) {
   return near;
 }
 
+await loadingStage(1,'Building terrain');
 /* ---------- terrain ---------- */
+const lakeRing=real?.lake||[];
+const lakeBounds=lakeRing.length?[
+  Math.min(...lakeRing.map(p=>p[0])),Math.max(...lakeRing.map(p=>p[0])),
+  Math.min(...lakeRing.map(p=>p[1])),Math.max(...lakeRing.map(p=>p[1]))]:null;
+function withinLake(x,z){
+  if(!lakeBounds || x<lakeBounds[0]||x>lakeBounds[1]||z<lakeBounds[2]||z>lakeBounds[3])return false;
+  let inside=false;
+  for(let i=0,j=lakeRing.length-1;i<lakeRing.length;j=i++){
+    const [a,b]=lakeRing[i],[c,d]=lakeRing[j];
+    if((b>z)!==(d>z) && x<(c-a)*(z-b)/(d-b)+a)inside=!inside;
+  }
+  return inside;
+}
+const lakeGround=real?.scenery?window.createLakeGround(real.scenery.ground,real.scenery):null;
 function baseH(x, z) {
+  if (openRoad && withinLake(x,z))return real.lakeHeight-2;
+  if (lakeBounds)return window.lakeBankHeight(x,z,lakeGround(x,z,demH(x,z)),lakeRing,lakeBounds,real.lakeHeight,real.size/real.cells);
   if (real) return demH(x, z);
   const r = Math.hypot(x, z) || 1;
   let h = 40 + (fbm(x / 300 + 5, z / 300 + 9) - 0.5) * 110 + (fbm(x / 60, z / 60, 4) - 0.5) * 14;
@@ -290,28 +443,49 @@ function baseH(x, z) {
 function terrainH(x, z) {
   const b = baseH(x, z), n = nearRoad(x, z);
   if (!n) return b;
-  const k = real ? smooth(6, 34, n.d) : smooth(9, 62, n.d);     // a real hillside keeps its shape closer to the road
+  if(real?.details){
+    const cut=Math.min(b,n.y-.07);
+    return cut+(b-cut)*smooth(4.5,15,n.d);
+  }
+  const k = openRoad ? smooth(35, 95, n.d) : real ? smooth(6, 34, n.d) : smooth(9, 62, n.d);     // a real hillside keeps its shape closer to the road
   return (n.y - 0.6) * (1 - k) + b * k;
 }
 const TS = real ? real.size : 3200, TG = real ? real.cells : 400, TC = TS / TG, TW = TG + 1;
+const lakeSurface=real?.scenery?window.createLakeSurfaceMask({THREE,scenery:real.scenery,lake:lakeRing}):null;
+let parkTexture=null, groundPixels=null;
+if(real?.details){
+  const img=await loadImg(real.groundImage || `assets/richmond-ground.png?v=${RICHMOND_DATA_VERSION}`);
+  parkTexture=new THREE.Texture(img);parkTexture.colorSpace=THREE.SRGBColorSpace;parkTexture.needsUpdate=true;
+  parkTexture.anisotropy=4;
+  const [,ctx]=canvas2d(1250,1250);ctx.drawImage(img,0,0,1250,1250);
+  groundPixels=ctx.getImageData(0,0,1250,1250).data;
+}
+function onMappedSurface(x,z){
+  if(!groundPixels)return Boolean(lakeSurface?.contains(x,z));
+  const i=Math.floor((x/TS+.5)*1250),j=Math.floor((z/TS+.5)*1250);
+  return i>=0&&j>=0&&i<1250&&j<1250&&groundPixels[4*(j*1250+i)+3]>60;
+}
 const H = new Float32Array(TW * TW);
 const tPos = new Float32Array(TW * TW * 3), tUv = new Float32Array(TW * TW * 2), tCol = new Float32Array(TW * TW * 3);
 for (let iz = 0; iz < TW; iz++) for (let ix = 0; ix < TW; ix++) {
   const x = -TS / 2 + ix * TC, z = -TS / 2 + iz * TC, k = iz * TW + ix, h = terrainH(x, z);
   H[k] = h; tPos.set([x, h, z], k * 3); tUv.set([x / 4, z / 4], k * 2);
 }
+if(real?.details)window.fitRichmondRoadbed({points:P,rights:R,tangents:T,heights:H,positions:tPos,cells:TG,size:TS});
 const tIdx = new Uint32Array(TG * TG * 6);
 for (let iz = 0, q = 0; iz < TG; iz++) for (let ix = 0; ix < TG; ix++) {
   const a = iz * TW + ix, b = a + TW, c = b + 1, d = a + 1;
   tIdx[q++] = a; tIdx[q++] = b; tIdx[q++] = d; tIdx[q++] = b; tIdx[q++] = c; tIdx[q++] = d;
 }
 // Exact height of the rendered mesh (so grass and trees sit on it, not near it).
-function meshH(x, z) {
+function coarseH(x, z) {
   const fx = (x + TS / 2) / TC, fz = (z + TS / 2) / TC;
   const ix = Math.min(TG - 1, Math.max(0, Math.floor(fx))), iz = Math.min(TG - 1, Math.max(0, Math.floor(fz)));
   const u = fx - ix, v = fz - iz, a = H[iz * TW + ix], b = H[(iz + 1) * TW + ix], c = H[(iz + 1) * TW + ix + 1], d = H[iz * TW + ix + 1];
   return u + v <= 1 ? a + (d - a) * u + (b - a) * v : c + (b - c) * (1 - u) + (d - c) * (1 - v);
 }
+const mountainGround=openRoad?window.createMountainGround({THREE,size:TS,cells:TG,points:P,rights:R,tangents:T,nearRoad,baseH,coarseH,refineArea:real.scenery.ground}):null;
+const meshH=mountainGround?.ground??coarseH;
 const tGeo = new THREE.BufferGeometry();
 tGeo.setAttribute('position', new THREE.BufferAttribute(tPos, 3));
 tGeo.setAttribute('uv', new THREE.BufferAttribute(tUv, 2));
@@ -320,11 +494,13 @@ tGeo.computeVertexNormals();
 {
   const nrm = tGeo.attributes.normal.array, col = new THREE.Color();
   const gA = new THREE.Color(0.8, 0.95, 0.7), gB = new THREE.Color(1.3, 1.15, 0.75), white = new THREE.Color(1, 1, 1), tMix = new Float32Array(TW * TW * 2);
+  const forestTint=new THREE.Color(.51,.67,.48);
   for (let k = 0; k < TW * TW; k++) {
     const x = tPos[k * 3], h = tPos[k * 3 + 1], z = tPos[k * 3 + 2], ny = nrm[k * 3 + 1];
-    const rk = smooth(0.86, 0.66, ny), sn = XMAS ? smooth(0.42, 0.72, ny) * 1.25 : smooth(330, 430, h) * smooth(0.5, 0.75, ny);
+    const rk = smooth(0.86, 0.66, ny), sn = XMAS ? smooth(0.42, 0.72, ny) * 1.25 : smooth(openRoad?2200:330,openRoad?2600:430,h) * smooth(0.5, 0.75, ny);
     col.copy(gA).lerp(gB, smooth(0.3, 0.7, fbm(x / 45, z / 45, 3))).lerp(white, rk);   // tint the grass, leave rock alone
     if (XMAS) { const d = 0.9 + 0.2 * fbm(x / 30, z / 30, 3); col.setRGB(d, d, d * 1.04); }          // drifts: faint light and shade across the snow
+    if(real?.woodland&&real.wood(x,z))col.multiply(forestTint);
     tCol.set([col.r, col.g, col.b], k * 3); tMix.set([rk, sn], k * 2);
   }
   tGeo.setAttribute('color', new THREE.BufferAttribute(tCol, 3));
@@ -374,17 +550,36 @@ terrainMat.onBeforeCompile = s => {      // grass on the flats, rock on the stee
     float snowAmt = smoothstep(0.35, 0.65, vMix.y + (l3 - 0.3) * 0.8);
     diffuseColor.rgb *= mix(mix(gc, rc, rockAmt), ${XMAS ? 'vec3(0.66, 0.70, 0.78)' : 'vec3(0.92)'}, snowAmt) * mix(1., vShade, uSunAmt);`);
 };
+if(parkTexture){
+  const baseCompile=terrainMat.onBeforeCompile;
+  terrainMat.onBeforeCompile=shader=>{
+    baseCompile(shader);shader.uniforms.parkMap={value:parkTexture};
+    shader.fragmentShader='uniform sampler2D parkMap;\n'+shader.fragmentShader.replace('#include <color_fragment>',`
+      #include <color_fragment>
+      vec4 park=texture2D(parkMap,vec2(.5+vMapUv.x*4./${TS.toFixed(1)},.5-vMapUv.y*4./${TS.toFixed(1)}));
+      diffuseColor.rgb=mix(diffuseColor.rgb,park.rgb*(.86+.3*texture2D(map,vMapUv).g),park.a);`);
+  };
+}
+if(real?.horizon)window.addMountainHorizon({THREE,scene,data:real.horizon,innerSize:TS});
+mountainGround?.install(scene,tGeo,terrainMat);
 const terrain = new THREE.Mesh(tGeo, terrainMat);
 terrain.receiveShadow = true; terrain.castShadow = true;
 scene.add(terrain);
+if(lakeRing.length){
+  const shape=new THREE.Shape(lakeRing.map(([x,z])=>new THREE.Vector2(x,-z)));
+  const water=new THREE.Mesh(new THREE.ShapeGeometry(shape).rotateX(-Math.PI/2),window.lakeSurfaceMaterial(THREE));
+  water.position.y=real.lakeHeight+.2;scene.add(water);
+}
 
 /* ---------- road ---------- */
 const TILES = Math.round(LEN / 12);
 function strip(offA, dyA, offB, dyB, uA, uB, vTiles) {
   const pos = new Float32Array((N + 1) * 6), uv = new Float32Array((N + 1) * 4), idx = new Uint32Array(N * 6);
   for (let i = 0; i <= N; i++) {
-    const j = i % N, p = P[j], r = R[j];
-    pos.set([p.x + r.x * offA, p.y + dyA, p.z + r.z * offA, p.x + r.x * offB, p.y + dyB, p.z + r.z * offB], i * 6);
+    const j = pointIndex(i), p = P[j], r = R[j];
+    const ax=p.x+r.x*offA,az=p.z+r.z*offA,bx=p.x+r.x*offB,bz=p.z+r.z*offB;
+    const ay=p.y+dyA,by=p.y+dyB;
+    pos.set([ax,ay,az,bx,by,bz],i*6);
     uv.set([uA, i / N * vTiles, uB, i / N * vTiles], i * 4);
     if (i < N) idx.set([2 * i, 2 * i + 1, 2 * i + 2, 2 * i + 1, 2 * i + 3, 2 * i + 2], i * 6);
   }
@@ -491,7 +686,11 @@ function shoulderTex() {
   return t;
 }
 const shoulderMat = new THREE.MeshStandardMaterial({ map: shoulderTex(), roughness: 1 });
-for (const g of [strip(-6.8, -0.72, -3.5, 0.005, 1, 0, LEN / 5), strip(3.5, 0.005, 6.8, -0.72, 0, 1, LEN / 5)]) {
+const parkVergeHeight=real?.details?window.buildRichmondShoulders({THREE,scene,points:P,rights:R,
+  spacing:LEN/N,ground:meshH,material:shoulderMat}):null;
+if(openRoad){
+  window.buildMountainShoulders({THREE,scene,points:P,rights:R,spacing:LEN/N,nearRoad,ground:meshH,shoulderMat,rockMap});
+}else if(!parkVergeHeight)for (const g of [strip(-6.8, -0.72, -3.5, 0.005, 1, 0, LEN / 5), strip(3.5, 0.005, 6.8, -0.72, 0, 1, LEN / 5)]) {
   const m = new THREE.Mesh(g, shoulderMat); m.receiveShadow = true; scene.add(m);
 }
 
@@ -528,28 +727,37 @@ grassMat.onBeforeCompile = s => {
 };
 const chunks = [];
 {
-  const PER = 40, COUNT = 7000, m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), up = new V3(0, 1, 0), sc = new V3(), ps = new V3(), col = new THREE.Color();
-  const build = c0 => {
-    const mesh = new THREE.InstancedMesh(tuftGeo, grassMat, COUNT);
-    for (let k = 0; k < COUNT; k++) {
-      const i = c0 + Math.floor(rnd() * PER), side = rnd() < 0.5 ? -1 : 1, d = 3.55 + Math.pow(rnd(), 1.6) * 12.5, j = (rnd() - 0.5) * 1.5;
+  const PER = 40, COUNT = 2400, m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), up = new V3(0, 1, 0), sc = new V3(), ps = new V3(), col = new THREE.Color();
+  const build = (c0,span) => {
+    let state=(c0+1)*2654435761>>>0;
+    const random=()=>{state=(Math.imul(state,1664525)+1013904223)>>>0;return state/4294967296;};
+    const count=Math.ceil(COUNT*span/PER);
+    const mesh = new THREE.InstancedMesh(tuftGeo, grassMat, count);
+    let placed=0;
+    for (let k = 0; k < count; k++) {
+      const i = c0 + Math.floor(random() * span), side = random() < 0.5 ? -1 : 1, d = 3.55 + Math.pow(random(), 1.6) * 12.5, j = (random() - 0.5) * 1.5;
       const x = P[i].x + R[i].x * side * d + T[i].x * j, z = P[i].z + R[i].z * side * d + T[i].z * j;
+      if(onMappedSurface(x,z))continue;
       let y = meshH(x, z);
-      if (d < 6.8) y = Math.max(y, P[i].y + T[i].y * j - 0.72 * (d - 3.5) / 3.3);
-      const tall = 0.28 + rnd() * 0.5 + (d > 5 ? rnd() * 0.25 : 0);
-      ps.set(x, y - 0.03, z); q.setFromAxisAngle(up, rnd() * 6.283); sc.set(0.5 + rnd() * 0.5, tall, 0.5 + rnd() * 0.5);
-      mesh.setMatrixAt(k, m4.compose(ps, q, sc));
-      mesh.setColorAt(k, col.setHSL(0.19 + rnd() * 0.07, 0.25 + rnd() * 0.25, 0.5 + rnd() * 0.25));
+      if(parkVergeHeight)y=parkVergeHeight(i,d*side,P[i].y+T[i].y*j,y);
+      else if (d < 6.8) y = Math.max(y, P[i].y + T[i].y * j - 0.72 * (d - 3.5) / 3.3);
+      const tall = 0.28 + random() * 0.5 + (d > 5 ? random() * 0.25 : 0);
+      ps.set(x, y - 0.03, z); q.setFromAxisAngle(up, random() * 6.283); sc.set(0.5 + random() * 0.5, tall, 0.5 + random() * 0.5);
+      mesh.setMatrixAt(placed, m4.compose(ps, q, sc));
+      mesh.setColorAt(placed++, col.setHSL(0.19 + random() * 0.07, 0.25 + random() * 0.25, 0.5 + random() * 0.25));
     }
-    mesh.frustumCulled = false; mesh.receiveShadow = true; scene.add(mesh);
+    mesh.count=placed;mesh.computeBoundingSphere(); mesh.boundingSphere.radius += 1; mesh.receiveShadow = true; scene.add(mesh);
     return mesh;
   };
-  if (!XMAS) for (let c0 = 0; c0 + PER <= N; c0 += PER) chunks.push({ c: P[c0 + PER / 2], mesh: null, build: () => build(c0) });
+  if(!XMAS)for(let start=0;start<N;start+=PER){
+    const span=Math.min(PER,N-start);
+    chunks.push({c:P[start+Math.floor(span/2)],mesh:null,build:()=>build(start,span)});
+  }
 }
 
 /* ---------- 19th-century touches (real courses): sheep on the hill, hay stooks in the vale ---------- */
 const stamps = [];       // patches where the meadow is grazed short or cut to stubble
-if (real) {
+if (COURSE === 'leckhampton') {
   const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), up = new V3(0, 1, 0), sc = new V3(), ps = new V3(), col = new THREE.Color();
   const open = (x, z) => Math.abs(x) < TS / 2 - 60 && Math.abs(z) < TS / 2 - 60 && !real.wood(x, z);
   const slopeAt = (x, z) => Math.hypot(demH(x + 10, z) - demH(x - 10, z), demH(x, z + 10) - demH(x, z - 10)) / 20;
@@ -614,7 +822,9 @@ if (real) {
   st0.spots = stamps.map(s => [Math.round(s.x), Math.round(s.z), s.amt]);
 }
 
+await loadingStage(2,'Placing scenery');
 /* ---------- meadow: a field of grass that travels with the rider and reads the terrain's height ---------- */
+const meadowGeometry = new THREE.InstancedBufferGeometry();
 {
   const data = new Float32Array(TW * TW * 4), mix = tGeo.attributes.aMix.array;
   for (let k = 0; k < TW * TW; k++) {             // per terrain vertex: height, distance to road, rock/snow, dryness
@@ -635,15 +845,19 @@ if (real) {
     tall[i] = 0.3 + rnd() * 0.6;
     col.setHSL(0.17 + rnd() * 0.09, 0.25 + rnd() * 0.25, 0.45 + rnd() * 0.25); tint.set([col.r, col.g, col.b], i * 3);
   }
-  const geo = new THREE.InstancedBufferGeometry();
-  geo.index = tuftGeo.index;
-  for (const a of ['position', 'normal', 'uv']) geo.setAttribute(a, tuftGeo.attributes[a]);
-  geo.setAttribute('aInst', new THREE.InstancedBufferAttribute(inst, 4));
-  geo.setAttribute('aTall', new THREE.InstancedBufferAttribute(tall, 1));
-  geo.setAttribute('color', new THREE.InstancedBufferAttribute(tint, 3));
-  geo.instanceCount = COUNT;
+  meadowGeometry.index = tuftGeo.index;
+  for (const a of ['position', 'normal', 'uv']) meadowGeometry.setAttribute(a, tuftGeo.attributes[a]);
+  meadowGeometry.setAttribute('aInst', new THREE.InstancedBufferAttribute(inst, 4));
+  meadowGeometry.setAttribute('aTall', new THREE.InstancedBufferAttribute(tall, 1));
+  meadowGeometry.setAttribute('color', new THREE.InstancedBufferAttribute(tint, 3));
   const mat = new THREE.MeshStandardMaterial({ map: grassMat.map, alphaTest: 0.45, roughness: 1, vertexColors: true });
   mat.onBeforeCompile = s => {
+    const sampleRoadGround=mountainGround?.grassShader(s)||'';
+    if(lakeSurface){
+      s.uniforms.lakeMask={value:lakeSurface.texture};s.uniforms.lakeMaskBounds={value:lakeSurface.bounds};
+      s.vertexShader='uniform sampler2D lakeMask; uniform vec4 lakeMaskBounds;\n'+s.vertexShader;
+    }
+    if(parkTexture){s.uniforms.parkMap={value:parkTexture};s.vertexShader="uniform sampler2D parkMap;\n"+s.vertexShader;}
     Object.assign(s.uniforms, { uTime, uField: { value: field }, uMeadowC: uMeadow });
     s.vertexShader = 'uniform float uTime; uniform vec2 uMeadowC; uniform sampler2D uField; attribute vec4 aInst; attribute float aTall;\n' + s.vertexShader
       .replace('#include <color_vertex>', `
@@ -653,6 +867,7 @@ if (real) {
       vec2 gu = clamp(gf - vec2(gi), 0., 1.);
       vec4 fa = texelFetch(uField, gi, 0), fb = texelFetch(uField, gi + ivec2(0, 1), 0), fc = texelFetch(uField, gi + ivec2(1, 1), 0), fd = texelFetch(uField, gi + ivec2(1, 0), 0);
       vec4 fl = gu.x + gu.y <= 1. ? fa + (fd - fa) * gu.x + (fb - fa) * gu.y : fc + (fb - fc) * (1. - gu.x) + (fd - fc) * (1. - gu.y);
+      ${sampleRoadGround}
       #include <color_vertex>
       vColor.rgb *= mix(vec3(0.8, 0.95, 0.7), vec3(1.3, 1.15, 0.75), fl.w) * 1.15;                 // same green-to-dry tint as the ground beneath`)
       .replace('#include <beginnormal_vertex>', `#include <beginnormal_vertex>
@@ -661,6 +876,8 @@ if (real) {
       vec2 dc = abs(wxz - uMeadowC);
       float keep = (1. - smoothstep(${(S * 0.36).toFixed(1)}, ${(S * 0.48).toFixed(1)}, max(dc.x, dc.y)))
                  * smoothstep(12.5, 16.5, fl.y) * (1. - smoothstep(0.15, 0.5, fl.z));        // thin out far away, off the road, off the rock
+      ${parkTexture?'keep *= 1.-texture2D(parkMap,vec2(.5+wxz.x/5000.,.5-wxz.y/5000.)).a;':''}
+      ${lakeSurface?'keep *= 1.-texture2D(lakeMask,(wxz-lakeMaskBounds.xy)/lakeMaskBounds.zw).r;':''}
       float cs = cos(aInst.z), sn = sin(aInst.z);
       vec3 loc = vec3(position.x * aInst.w, position.y * aTall, position.z * aInst.w);
       loc.xz = vec2(cs * loc.x - sn * loc.z, sn * loc.x + cs * loc.z);
@@ -668,7 +885,7 @@ if (real) {
       loc.x += wv * uv.y; loc.z += wv * 0.6 * uv.y;
       vec3 transformed = vec3(wxz.x, fl.x - 0.03, wxz.y) + loc * keep;`);
   };
-  const meadow = new THREE.Mesh(geo, mat);
+  const meadow = new THREE.Mesh(meadowGeometry, mat);
   meadow.frustumCulled = false; meadow.receiveShadow = true; meadow.visible = !XMAS; scene.add(meadow);
 }
 
@@ -752,7 +969,7 @@ if (XMAS) {
   smokeAt.forEach((p, k) => { for (let i = 0; i < PUFFS; i++) { sp.set(p, (k * PUFFS + i) * 3); ph[k * PUFFS + i] = rnd(); } });
   const sg = new THREE.BufferGeometry(); sg.setAttribute('position', new THREE.BufferAttribute(sp, 3)); sg.setAttribute('aPh', new THREE.BufferAttribute(ph, 1));
   const smoke = new THREE.Points(sg, new THREE.ShaderMaterial({
-    transparent: true, depthWrite: false, uniforms: { uTime, uPx: { value: innerHeight * Math.min(devicePixelRatio, 2) / (2 * Math.tan(0.6)) }, uCol: { value: new V3(0.5, 0.52, 0.6) } },
+    transparent: true, depthWrite: false, uniforms: { uTime, uPx, uCol: { value: new V3(0.5, 0.52, 0.6) } },
     vertexShader: `uniform float uTime, uPx; attribute float aPh; varying float vA;
       void main(){
         float age = fract(uTime * 0.07 + aPh);
@@ -768,6 +985,17 @@ if (XMAS) {
 }
 
 /* ---------- pines: a trunk plus whorls of needle cards ---------- */
+let parkCrownGeometry;
+const variedCrowns=Boolean(real?.details||real?.woodland);
+let forestStands=null;
+if(real?.woodland?.stands){
+  const {standSide,stands,size}=real.woodland;
+  const packed=Uint8Array.from(atob(stands),c=>c.charCodeAt(0));
+  const types=Uint8Array.from({length:standSide*standSide},(_,i)=>((packed[i>>2]>>(2*(i%4)))&3)*127);
+  const texture=new THREE.DataTexture(types,standSide,standSide,THREE.RedFormat);
+  texture.needsUpdate=true;
+  forestStands={texture,size};
+}
 {
   const [bc, bg] = canvas2d(256, 256);
   bg.lineCap = 'round';
@@ -821,23 +1049,36 @@ if (XMAS) {
       lg.fillStyle = `rgb(${l * 0.8 | 0},${l + 30},${l * 0.42 | 0})`;
       lg.beginPath(); lg.ellipse(128 + Math.cos(a) * r, 128 + Math.sin(a) * r * 0.88, 5 + rnd() * 7, 3 + rnd() * 4, rnd() * 3.14, 0, 6.283); lg.fill();
     }
-    treeMap = new THREE.CanvasTexture(lc); treeMap.colorSpace = THREE.SRGBColorSpace; treeMap.anisotropy = 4;
+    treeMap = new THREE.CanvasTexture(variedCrowns?window.makeWoodlandCrowns(lc,forestStands):lc);
+    treeMap.colorSpace = THREE.SRGBColorSpace; treeMap.anisotropy = 4;
     const C = new V3(0, 7, 0), quad = corners => {
       const base = pos.length / 3;
       corners.forEach(([x, y, z], k) => {
         pos.push(x, y, z); uv.push(k === 0 || k === 3 ? 0 : 1, k < 2 ? 0 : 1);
-        const n = new V3(x, y + 1.5, z).sub(C).normalize(); nrm.push(n.x, n.y, n.z);       // shade it like a ball, not a set of cards
+        const n = new V3(x, y + 1.5, z).sub(C).normalize();
+        // Broad canopies catch light from above. Soften the normal change where
+        // foliage cards intersect, especially when the rider faces the low sun.
+        if(variedCrowns)n.set(n.x*.2,.85+n.y*.2,n.z*.2).normalize();
+        nrm.push(n.x, n.y, n.z);
       });
       idx.push(base, base + 1, base + 2, base, base + 2, base + 3);
     };
     for (const a of [0, 1.047, 2.094]) { const cx = Math.cos(a) * 4.2, cz = Math.sin(a) * 4.2; quad([[-cx, 3.2, -cz], [cx, 3.2, cz], [cx, 10.8, cz], [-cx, 10.8, -cz]]); }
-    for (const y of [5.6, 8.2]) quad([[-3.7, y, -3.7], [3.7, y, -3.7], [3.7, y, 3.7], [-3.7, y, 3.7]]);
+    if(variedCrowns){
+      quad([[-2.8,4.2,-2.1],[2.8,4.2,-2.1],[2.8,8.7,1.7],[-2.8,8.7,1.7]]);
+      quad([[-1.7,5.6,-2.9],[-1.7,5.6,2.9],[1.5,10,2.9],[1.5,10,-2.9]]);
+    }else for (const y of [5.6, 8.2]) quad([[-3.7, y, -3.7], [3.7, y, -3.7], [3.7, y, 3.7], [-3.7, y, 3.7]]);
   }
   const folGeo = new THREE.BufferGeometry();
   folGeo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
   folGeo.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
   folGeo.setAttribute('normal', new THREE.Float32BufferAttribute(nrm, 3));
   folGeo.setIndex(idx);
+  if(variedCrowns){
+    parkCrownGeometry=folGeo;
+    folGeo.computeBoundingSphere();
+    folGeo.boundingSphere.radius*=1.4;  // include the broadest surveyed parkland crown
+  }
   const folMat = new THREE.MeshStandardMaterial({ map: treeMap, alphaTest: 0.4, side: THREE.DoubleSide, roughness: 0.9 });
   folMat.onBeforeCompile = s => {
     s.uniforms.uTime = uTime;
@@ -849,31 +1090,46 @@ if (XMAS) {
       #endif`);
     s.fragmentShader = s.fragmentShader.replace('#include <normal_fragment_begin>',
       THREE.ShaderChunk.normal_fragment_begin.replace(/gl_FrontFacing \? 1\.0 : - ?1\.0/, '1.0'));
+    if(variedCrowns)window.shadeWoodlandCrowns(s,forestStands);
   };
   const trunkGeo = real ? new THREE.CylinderGeometry(0.16, 0.3, 5.2, 6).translate(0, 2.6, 0) : new THREE.CylinderGeometry(0.04, 0.25, 10.8, 6).translate(0, 5.4, 0);
+
   const spots = [];
   const built = new Set(), cellKey = (x, z) => Math.floor(x / 10) * 4096 + Math.floor(z / 10);
   if (real) {
     for (const [bx, bz, w] of real.osm.buildings) for (let dx = -w / 2 - 4; dx <= w / 2 + 4; dx += 10) for (let dz = -w / 2 - 4; dz <= w / 2 + 4; dz += 10) built.add(cellKey(bx + dx, bz + dz));
-    for (const [x, z] of real.osm.trees) { const nr = nearRoad(x, z); if (!nr || nr.d > 5.5) spots.push([x, meshH(x, z), z]); }     // mapped street and field trees
+    for (const [x, z, h] of real.details?.trees || real.osm.trees) { const nr = nearRoad(x, z); if (!nr || nr.d > 5.5) spots.push([x, meshH(x, z), z, h]); }     // mapped street and field trees
   }
-  for (let n = 0; n < (real ? 320000 : 70000) && spots.length < (real ? 26000 : 7000); n++) {
+  for (let n = 0; !real?.details && n < (real ? 320000 : 70000) && spots.length < (real ? 26000 : 7000); n++) {
     const x = (rnd() - 0.5) * TS * 0.78, z = (rnd() - 0.5) * TS * 0.78, nr = nearRoad(x, z), d = nr ? nr.d : 999;
     if (d < 11) continue;
     if (chalets.some(c => (c[0] - x) ** 2 + (c[1] - z) ** 2 < 170)) continue;
-    const forest = fbm(x / 140 + 3, z / 140 + 7, 3);
+    const forest = real ? 0 : fbm(x / 140 + 3, z / 140 + 7, 3);
     if (real) {            // trees where the map says there is woodland, and never on a building
-      if (!real.wood(x, z) || built.has(cellKey(x, z))) continue;
+      if(openRoad){
+        if(built.has(cellKey(x,z))||!real.wood(x,z)||lakeSurface.contains(x,z))continue;
+      }else if (!real.wood(x, z) || built.has(cellKey(x, z))) continue;
     } else if (!(forest > 0.53 || (d < 55 && rnd() < (XMAS ? 0.42 : 0.1)))) continue;
     const y = meshH(x, z);
     if (!real && y > 240) continue;
     spots.push([x, y, z]);
   }
+  if(real?.woodland){
+    window.addLakeWoodland({course:real,bounds:lakeBounds,spots,groundHeight:meshH,water:withinLake,nearRoad,random:rnd});
+    // Spend the near-road tree budget where the satellite map marks forest.
+    for(let i=0;i<P.length;i+=2){
+      const offset=(rnd()<.5?-1:1)*(9+rnd()*110);
+      const x=P[i].x+R[i].x*offset,z=P[i].z+R[i].z*offset;
+      if(!real.wood(x,z)||built.has(cellKey(x,z))||lakeSurface.contains(x,z))continue;
+      if(nearRoad(x,z)?.d<8)continue;
+      spots.push([x,meshH(x,z),z]);
+    }
+  }
   const fol = new THREE.InstancedMesh(folGeo, folMat, spots.length);
   const trunk = new THREE.InstancedMesh(trunkGeo, new THREE.MeshStandardMaterial({ color: 0x33251a, roughness: 1 }), spots.length);
   const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), up = new V3(0, 1, 0), sc = new V3(), ps = new V3(), col = new THREE.Color();
-  spots.forEach(([x, y, z], i) => {
-    const s = 0.9 + rnd() * 0.9;
+  spots.forEach(([x, y, z, canopyHeight], i) => {
+    const s = canopyHeight ? canopyHeight/10.8 : 0.9 + rnd() * 0.9;
     ps.set(x, y - 0.3, z); q.setFromAxisAngle(up, rnd() * 6.283); sc.set(s * (0.85 + rnd() * 0.3), s, s * (0.85 + rnd() * 0.3));
     m4.compose(ps, q, sc); fol.setMatrixAt(i, m4); trunk.setMatrixAt(i, m4);
     if (XMAS && xl.p.length < 110000 * 3) {            // fairy lights wound round the trees beside the road
@@ -889,7 +1145,30 @@ if (XMAS) {
     }
     fol.setColorAt(i, col.setRGB(0.7 + rnd() * 0.3, 0.75 + rnd() * 0.25, 0.6 + rnd() * 0.3));
   });
-  for (const m of [fol, trunk]) { m.castShadow = true; m.receiveShadow = true; m.frustumCulled = false; scene.add(m); }
+  if(real?.details||real?.woodland){
+    const crownDepth=new THREE.MeshDepthMaterial({depthPacking:THREE.RGBADepthPacking,map:treeMap,alphaTest:.4,side:THREE.DoubleSide});
+    crownDepth.onBeforeCompile=shader=>window.shadeWoodlandCrowns(shader,forestStands);
+    // Group surveyed crowns locally so the camera and shadow pass can skip entire groves.
+    const sectors=new Map();
+    spots.forEach(([x,,z],i)=>{
+      const cell=real.woodland?900:300;
+      const key=Math.floor(x/cell)+','+Math.floor(z/cell);
+      if(!sectors.has(key))sectors.set(key,[]);
+      sectors.get(key).push(i);
+    });
+    for(const indices of sectors.values()){
+      for(const source of [fol,trunk]){
+        const batch=new THREE.InstancedMesh(source.geometry,source.material,indices.length);
+        if(source===fol && crownDepth)batch.customDepthMaterial=crownDepth;
+        indices.forEach((index,i)=>{
+          source.getMatrixAt(index,m4);batch.setMatrixAt(i,m4);
+          if(source.instanceColor){source.getColorAt(index,col);batch.setColorAt(i,col);}
+        });
+        batch.computeBoundingSphere();batch.castShadow=true;batch.receiveShadow=true;scene.add(batch);
+      }
+    }
+    fol.dispose();trunk.dispose();
+  }else for (const m of [fol,trunk]){m.castShadow=true;m.receiveShadow=true;m.frustumCulled=false;scene.add(m);}
 }
 
 if (xl.p.length) {         // every Christmas light is one glowing point; bright enough to bloom
@@ -898,7 +1177,7 @@ if (xl.p.length) {         // every Christmas light is one glowing point; bright
   g.setAttribute('position', new THREE.Float32BufferAttribute(xl.p, 3)); g.setAttribute('aCol', new THREE.Float32BufferAttribute(xl.c, 3)); g.setAttribute('aPh', new THREE.BufferAttribute(ph, 1));
   const lights = new THREE.Points(g, new THREE.ShaderMaterial({
     transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
-    uniforms: { uTime, uPx: { value: innerHeight * Math.min(devicePixelRatio, 2) / (2 * Math.tan(0.6)) } },
+    uniforms: { uTime, uPx },
     vertexShader: `uniform float uTime, uPx; attribute vec3 aCol; attribute float aPh; varying vec3 vCol;
       void main(){
         vec4 mv = viewMatrix * vec4(position, 1.); gl_Position = projectionMatrix * mv;
@@ -922,6 +1201,18 @@ if (real && real.osm.buildings.length) {
   wg.fillStyle = '#efebe0'; wg.fillRect(40, 30, 48, 64);
   wg.fillStyle = '#27303a'; wg.fillRect(44, 34, 40, 56);
   wg.fillStyle = '#efebe0'; wg.fillRect(63, 34, 2, 56); wg.fillRect(44, 61, 40, 2); wg.fillRect(36, 94, 56, 5);
+  if(openRoad){
+    // Painted timber shutters and a pale stone surround on the upper storeys.
+    for(const x of [16,90]){
+      wg.fillStyle='#849185';wg.fillRect(x,28,23,68);
+      wg.fillStyle='#5c6e66';
+      for(let y=32;y<93;y+=5)wg.fillRect(x+2,y,19,1.5);
+    }
+    const glass=wg.createLinearGradient(0,32,0,90);
+    glass.addColorStop(0,'#8196a2');glass.addColorStop(.48,'#51656e');glass.addColorStop(1,'#2e3b3e');
+    wg.fillStyle=glass;wg.fillRect(44,34,40,56);
+    wg.fillStyle='#d4c6ab';wg.fillRect(63,34,2,56);wg.fillRect(44,59,40,2);
+  }
   const wallMap = new THREE.CanvasTexture(wc); wallMap.wrapS = wallMap.wrapT = THREE.RepeatWrapping; wallMap.colorSpace = THREE.SRGBColorSpace; wallMap.anisotropy = MAX_ANISO;
   const wallMat = new THREE.MeshStandardMaterial({ map: wallMap, roughness: 0.95 });
   wallMat.onBeforeCompile = s => {
@@ -931,6 +1222,26 @@ if (real && real.osm.buildings.length) {
         vMapUv = uv * vec2(max(1., floor((abs(normal.x) > 0.5 ? sz : sx) / 3.4 + 0.5)), max(1., floor(sy / 2.8 + 0.5)));
       #endif`);
   };
+  if(openRoad){
+    // The ground-floor bay varies across each facade without an extra draw call.
+    const [doorCanvas,door]=canvas2d(128,128);
+    door.drawImage(wc,0,0);
+    door.fillStyle='#c3b49c';door.fillRect(14,22,100,106);
+    door.fillStyle='#685746';door.fillRect(31,30,64,98);
+    door.fillStyle='#3e4946';door.fillRect(37,37,52,37);
+    door.fillStyle='#756350';door.fillRect(38,81,50,41);
+    door.fillStyle='#d4ba89';door.fillRect(82,81,4,3);
+    const doorMap=new THREE.CanvasTexture(doorCanvas);doorMap.colorSpace=THREE.SRGBColorSpace;
+    const windows=wallMat.onBeforeCompile;
+    wallMat.onBeforeCompile=shader=>{
+      windows(shader);
+      shader.uniforms.doorMap={value:doorMap};
+      shader.fragmentShader='uniform sampler2D doorMap;\n'+shader.fragmentShader.replace('#include <map_fragment>',`
+        vec4 facade=texture2D(map,vMapUv);
+        if(vMapUv.y<1.0 && mod(floor(vMapUv.x),4.0)==0.0)facade=texture2D(doorMap,fract(vMapUv));
+        diffuseColor*=facade;`);
+    };
+  }
   const hip = new THREE.BufferGeometry();          // a hipped roof: four slopes up to a short ridge
   hip.setAttribute('position', new THREE.Float32BufferAttribute([
     -.5, 0, -.5, -.25, 1, 0, .25, 1, 0,   -.5, 0, -.5, .25, 1, 0, .5, 0, -.5,
@@ -939,13 +1250,14 @@ if (real && real.osm.buildings.length) {
   hip.computeVertexNormals();
   const B = real.osm.buildings, box = new THREE.BoxGeometry(1, 1, 1).translate(0, 0.5, 0);
   const roofMat = new THREE.MeshStandardMaterial({ roughness: 0.8 });
+  if(openRoad){
+    window.buildCoreVillages({THREE,scene,footprints:real.scenery.footprints,buildings:B,points:P,rights:R,nearRoad,meshH,wallMat,roofMat});
+  }else{
   const walls = new THREE.InstancedMesh(box, wallMat, B.length), pitched = new THREE.InstancedMesh(hip, roofMat, B.length), flat = new THREE.InstancedMesh(box, roofMat, B.length);
   let np = 0, nf = 0, nw = 0;
-  const SHOW_TOWN = false;     // 19th-century Leckhampton: a village among fields, so the modern town is left out
-  const KEEP_OUT = 150;        // simple house shapes only hold up at a distance, so none are drawn near the road
-  const farFromRoad = (x, z) => { for (let k = 0; k < N; k += 8) { const ex = P[k].x - x, ez = P[k].z - z; if (ex * ex + ez * ez < KEEP_OUT * KEEP_OUT) return false; } return true; };
+  const SHOW_TOWN = COURSE==='richmond';     // 19th-century Leckhampton: a village among fields, so the modern town is left out
   B.forEach(([x, z, w, d, ang, h, roof]) => {
-    if (!SHOW_TOWN || !farFromRoad(x, z)) return;
+    if (!SHOW_TOWN) return;
     const i = nw++;
     const c = Math.cos(ang), sn = Math.sin(ang);
     let lo = 1e9, hi = -1e9;
@@ -960,6 +1272,7 @@ if (real && real.osm.buildings.length) {
   walls.count = nw; pitched.count = np; flat.count = nf;
   for (const m of [walls, pitched, flat]) { m.castShadow = true; m.receiveShadow = true; m.frustumCulled = false; scene.add(m); }
 
+  }
   // hedges and dry-stone walls, laid in short pieces that follow the ground
   const [hc, hg] = canvas2d(64, 64); hg.fillStyle = '#263a17'; hg.fillRect(0, 0, 64, 64);
   for (let i = 0; i < 500; i++) { const l = 30 + rnd() * 50 | 0; hg.fillStyle = `rgb(${l * 0.7 | 0},${l + 20},${l * 0.4 | 0})`; hg.fillRect(rnd() * 64, rnd() * 64, 2 + rnd() * 3, 2 + rnd() * 3); }
@@ -999,7 +1312,8 @@ const uLid = { value: 0 }, uCloudLit = { value: new V3() }, uCloudDark = { value
         gl_FragColor = vec4(mix(uHaze, col, 0.25 + 0.75 * fade), d * fade * 0.92 * uCloud * mix(1., smoothstep(0.25, 0.6, (vW.y - cameraPosition.y) / length(vW - cameraPosition)), uLid));
       }`
   }));
-  clouds.position.y = 1400; clouds.frustumCulled = false; clouds.renderOrder = 2; scene.add(clouds);
+  if(openRoad)clouds.scale.set(3,1,3);
+  clouds.position.y = openRoad?3200:1400; clouds.frustumCulled = false; clouds.renderOrder = 2; scene.add(clouds);
 
   const n = 700, a = new Float32Array(n * 3);
   for (let i = 0; i < n * 3; i++) a[i] = rnd() * 40;
@@ -1021,7 +1335,7 @@ const uLid = { value: 0 }, uCloudLit = { value: new V3() }, uCloudDark = { value
 }
 
 /* ---------- smoke from the quarry workings on the scarp (real courses) ---------- */
-const uPx = { value: innerHeight * Math.min(devicePixelRatio, 2) / (2 * Math.tan(0.6)) };      // metres to pixels at 1 m
+
 if (real && real.quarry) {
   const [qx, qz] = real.quarry, cands = [], src = [];
   for (let n = 0; n < 400; n++) {
@@ -1088,6 +1402,7 @@ const dome = new THREE.Mesh(new THREE.SphereGeometry(8000, 32, 16), new THREE.Sh
       gl_FragColor = vec4(col, uA);
     }`
 }));
+if(openRoad)dome.scale.setScalar(6);
 dome.renderOrder = 1; dome.frustumCulled = false; scene.add(dome);
 
 // Rain: short streaks in a box that travels with the rider; they slant against your speed.
@@ -1178,7 +1493,7 @@ function stepWeather(dt) {
   }
   sun.intensity = wx.sun; sun.color.setRGB(wx.sunCol[0], wx.sunCol[1], wx.sunCol[2], THREE.SRGBColorSpace);
   hemi.intensity = wx.hemi;
-  scene.fog.density = wx.fog; scene.fog.color.fromArray(wx.fogCol);
+  scene.fog.density = wx.fog*(openRoad ? .10+.35*smooth(.0008,.0015,wx.fog) : 1); scene.fog.color.fromArray(wx.fogCol);
   const u = dome.material.uniforms; u.uA.value = wx.dome; u.uH.value.fromArray(wx.domeH); u.uZ.value.fromArray(wx.domeZ); u.uPaint.value = wx.paint;
   dome.position.copy(camera.position);
   uCloud.value = wx.cloud; uMote.value = wx.mote; uLid.value = wx.dome; uSunAmt.value = Math.min(1, wx.sun / 10);
@@ -1194,8 +1509,9 @@ document.querySelectorAll('#wx button').forEach(b => b.addEventListener('click',
 const LAB = /^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname) || location.protocol === 'file:';
 if (!LAB) document.querySelector('#wx [data-w="starry"]')?.remove();
 if (!XMAS) document.querySelector('#wx [data-w="snow"]')?.remove(); else setWeather('snow', true);
-addEventListener('keydown', e => { const n = ['golden', 'overcast', 'rain', 'mist', LAB && 'starry'][+e.key - 1]; if (n) setWeather(n); });
+addEventListener('keydown', e => { if(document.querySelector('dialog[open]') || e.target.matches('input,select,textarea')) return; const n = ['golden', 'overcast', 'rain', 'mist', LAB && 'starry'][+e.key - 1]; if (n) setWeather(n); });
 
+await loadingStage(3,'Preparing the ride');
 /* ---------- cockpit ---------- */
 const rig = new THREE.Group();
 rig.position.set(0, -0.33, -0.5);
@@ -1231,7 +1547,7 @@ function drawHeadUnit(kmh, w) {
 }
 
 /* ---------- lens ---------- */
-const composer = new EffectComposer(renderer, new THREE.WebGLRenderTarget(innerWidth, innerHeight, { type: THREE.HalfFloatType, samples: 4 }));
+const composer = new EffectComposer(renderer, new THREE.WebGLRenderTarget(innerWidth, innerHeight, { type: THREE.HalfFloatType, samples: smoothGraphics?0:4 }));
 composer.addPass(new RenderPass(scene, camera));
 const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.22, 0.6, 3.5);
 composer.addPass(bloom);
@@ -1245,12 +1561,12 @@ const rays = new ShaderPass({      // light shafts: smear the bright sky outward
       vec2 d = uSunUv - vUv;
       float j = fract(sin(dot(gl_FragCoord.xy, vec2(12.9898, 78.233))) * 43758.5453);
       vec3 acc = vec3(0.); float w = 1., tot = 0.;
-      for (int i = 0; i < 36; i++) {
-        vec2 uv = vUv + d * ((float(i) + j) / 36.) * 0.92;
+      for (int i = 0; i < 16; i++) {
+        vec2 uv = vUv + d * ((float(i) + j) / 16.) * 0.92;
         float inb = step(0., uv.x) * step(uv.x, 1.) * step(0., uv.y) * step(uv.y, 1.);
         vec3 c = texture2D(tDiffuse, uv).rgb;
         acc += c * smoothstep(uThr, uThr * 2.5, dot(c, vec3(0.3, 0.6, 0.1))) * w * inb;
-        tot += w; w *= 0.965;
+        tot += w; w *= 0.923;
       }
       gl_FragColor = vec4(base + acc / tot * uAmt, 1.);
     }`
@@ -1294,49 +1610,109 @@ const lens = new ShaderPass({
       return mix(col * vec3(0.82, 0.9, 1.25), col * vec3(1.12, 1.04, 0.86), smoothstep(0.1, 0.6, l));   // blue shadows, warm lights
     }
     void main(){
-      vec2 c = vUv - 0.5; float r2 = dot(c, c);
-      vec2 dir = c * r2 * (0.02 + 0.2 * uSpeed);            // edges streak with speed
       vec3 dr = uRain > 0.01 ? drops(vUv, uTime) * uRain : vec3(0.);
       vec2 uv0 = vUv + dr.xy;
+      vec2 offset = vUv - 0.5;
+      vec2 streak = offset * dot(offset, offset) * (0.22 * uSpeed);
       vec3 col = vec3(0.);
-      for (int i = 0; i < 8; i++) col += texture2D(tDiffuse, uv0 - dir * (float(i) / 7.)).rgb;
-      col = col / 8. + dr.z * 0.012;
+      for (int i = 0; i < 6; i++) col += texture2D(tDiffuse, uv0 - streak * (float(i) / 5.)).rgb;
+      col = col / 6. + dr.z * 0.012;
       if (uPaint > 0.01) col = mix(col, painted(uv0), uPaint);
-      col *= 1. - smoothstep(0.12, 0.62, r2) * 0.55;        // vignette
-      col += (h(vUv * 917. + fract(uTime) * 31.) - 0.5) * 0.035;   // grain
       gl_FragColor = vec4(col, 1.);
     }`
 });
 composer.addPass(lens);
-addEventListener('resize', () => {
-  camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix();
-  renderer.setSize(innerWidth, innerHeight); composer.setSize(innerWidth, innerHeight);
-  lens.uniforms.uAspect.value = innerWidth / innerHeight;
-  uPx.value = innerHeight * Math.min(devicePixelRatio, 2) / (2 * Math.tan(0.6));
-});
+function sizeScene() {
+  camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth,innerHeight);
+  composer.setSize(innerWidth,innerHeight);
+  lens.uniforms.uAspect.value=camera.aspect;
+  uPx.value=innerHeight*renderRatio()/(2*Math.tan(0.6));
+}
+let shadowAge=Infinity,slowFrames=0,observedFrames=0,observedSeconds=0;
+function setSmoothGraphics(enabled) {
+  const changed=smoothGraphics!==enabled;
+  smoothGraphics=enabled;
+  // The seed sequence scatters tufts evenly, so a prefix retains full meadow coverage.
+  meadowGeometry.instanceCount=enabled?90000:meadowGeometry.getAttribute('aInst').count;
+  // Three upright crown panels cover every riding direction. The interior
+  // foliage panels add volume in Full detail.
+  if(parkCrownGeometry)parkCrownGeometry.setDrawRange(0,enabled?18:parkCrownGeometry.index.count);
+  if(changed){
+    for(const target of [composer.renderTarget1,composer.renderTarget2]){
+      target.samples=enabled?0:4;target.dispose();
+    }
+    renderer.setPixelRatio(renderRatio());
+    composer.setPixelRatio(renderRatio());
+  }
+  bloom.enabled=!enabled;
+  renderer.shadowMap.autoUpdate=!enabled;
+  renderer.shadowMap.needsUpdate=true;
+  shadowAge=Infinity;
+  sizeScene();
+}
+setSmoothGraphics(smoothGraphics);
+qualitySelect.onchange=()=>{
+  try{localStorage.setItem('ride-graphics',qualitySelect.value);}catch{}
+  slowFrames=0;observedFrames=0;observedSeconds=0;
+  setSmoothGraphics(qualitySelect.value==='smooth');
+};
+function watchFrameTime(seconds) {
+  if(qualitySelect.value!=='auto'||smoothGraphics||document.hidden||seconds<=0)return;
+  observedFrames++;observedSeconds+=Math.min(seconds,1);
+  if(seconds>0.030)slowFrames++;
+  if(observedFrames>=120||(observedFrames>=12&&observedSeconds>=4)){
+    if(slowFrames>observedFrames*0.6)setSmoothGraphics(true);
+    slowFrames=0;observedFrames=0;observedSeconds=0;
+  }
+}
+addEventListener('resize',sizeScene);
 
 /* ---------- input: keys, slider, smart trainer ---------- */
-const START = real ? 850 : 0;          // Leckhampton: begin on the lane about 150 m below where the hill steepens, not out in the vale
-const st = { s: START, v: 6, power: 220, target: 220, dist: 0, trainer: false };
+const START = COURSE === 'leckhampton' ? 850 : 0;          // Leckhampton: begin on the lane about 150 m below where the hill steepens, not out in the vale
+const st = { s: START, v: openRoad?0:6, power: 220, target: 220, dist: 0, trainer: false };
+const massInput=$('rideMass');
+try{
+  const savedMass=localStorage.getItem('ride-total-mass');
+  if(savedMass!==null){massInput.value=savedMass;if(!massInput.validity.valid||!massInput.value)massInput.value='80';}
+}catch{}
+st.mass=massInput.valueAsNumber;
+massInput.onchange=()=>{
+  if(!massInput.value||!massInput.validity.valid){massInput.value=String(st.mass);return;}
+  st.mass=massInput.valueAsNumber;
+  try{localStorage.setItem('ride-total-mass',String(st.mass));}catch{}
+};
 window.ride = st; st.haze = hazeCol; st.built = st0;
 st.goNear = (x, z) => { let b = 0, bd = 1e12; for (let i = 0; i < N; i++) { const d = (P[i].x - x) ** 2 + (P[i].z - z) ** 2; if (d < bd) { bd = d; b = i; } } st.s = Math.max(0, b * LEN / N - 60); return Math.round(Math.sqrt(bd)); };   // for checking: ride to the road nearest a point
 st.weather = (n, i) => setWeather(n, i);
-const skip = m => { st.s = (((st.s + m) % LEN) + LEN) % LEN; };
-const setTarget = w => { st.target = Math.min(900, Math.max(0, w)); $('pwr').value = st.target; };
+function refreshRoadPosition(){
+  lean=0;grade=at(st.s,pose).t.y*100;huT=0;bike.at=0;
+  trainingUI.refresh();
+}
+const skip=m=>{
+  if($('lakeView').open)return;
+  trainingUI.resetLap();richmondSections?.reset();
+  st.s=bounded(st.s+m);climb?.jump();refreshRoadPosition();
+};
+const setTarget = w => { $('pwr').value = w; st.target=Number($('pwr').value); };
 addEventListener('keydown', e => {
-  if (e.key === 'ArrowUp') setTarget(st.target + 10);
-  if (e.key === 'ArrowDown') setTarget(st.target - 10);
+  if (document.querySelector('dialog[open]') || e.target.matches('input,select,textarea')) return;
+  if (!st.trainer && e.key === 'ArrowUp') setTarget(st.target + 10);
+  if (!st.trainer && e.key === 'ArrowDown') setTarget(st.target - 10);
   if (e.key === 'ArrowRight') skip(250);
   if (e.key === 'ArrowLeft') skip(-250);
 });
 $('pwr').addEventListener('input', e => { st.target = +e.target.value; });
 
 // hide everything on screen, leaving only the ride: the button, the H key, or by voice. H, a click, or "show" brings it back.
-const setClean = hide => document.body.classList.toggle('clean', hide);
+const setClean = hide => {
+  if (hide) $('settings').hidePopover();
+  document.body.classList.toggle('clean', hide);
+};
 const isClean = () => document.body.classList.contains('clean');
 $('clean').addEventListener('click', e => { e.stopPropagation(); setClean(true); });
 addEventListener('click', () => { if (isClean()) setClean(false); });
-addEventListener('keydown', e => { if ((e.key === 'h' || e.key === 'H') && !e.metaKey && !e.ctrlKey && !e.altKey) setClean(!isClean()); });
+addEventListener('keydown', e => { if (!document.querySelector('dialog[open]') && (e.key === 'h' || e.key === 'H') && !e.metaKey && !e.ctrlKey && !e.altKey) setClean(!isClean()); });
 $('skip').addEventListener('click', () => skip(250));
 /* Smart trainer. Power is read from the Cycling Power service. If the trainer also has the Fitness Machine
    Service (FTMS), the game takes control of it and sends the road gradient, so climbs feel harder on the bike.
@@ -1363,9 +1739,13 @@ const TRAINER_KEY = 'golden-hour-ride-trainer';     // the last trainer used: { 
 const lastTrainer = () => { try { return JSON.parse(localStorage.getItem(TRAINER_KEY)) || null; } catch { return null; } };
 const btLabel = () => {
   const last = lastTrainer();
-  $('bt').textContent = bike.dev ? (bike.point ? 'Trainer: power and gradient' : 'Trainer: power only')
+  $('erg').disabled=!(bike.point && bike.canErg);
+  $('erg').checked=!$('erg').disabled && bike.ergDevice===bike.dev;
+  $('ergNote').textContent=$('erg').disabled?'Connect an ERG-capable trainer':'Uses interval targets during workouts';
+  $('bt').textContent = bike.dev ? (bike.point ? 'Trainer connected' : 'Trainer: power only')
     : bike.known || (last && navigator.bluetooth && navigator.bluetooth.getDevices) ? 'Reconnect trainer' : 'Connect trainer';
 };
+$('erg').addEventListener('change',()=>{bike.ergDevice=$('erg').checked?bike.dev:null;});
 $('hless').addEventListener('click', () => setHills(HILLS * 100 - 10));
 $('hmore').addEventListener('click', () => setHills(HILLS * 100 + 10));
 
@@ -1383,7 +1763,7 @@ const ftmsAsk = (point, bytes) => new Promise((ok, no) => {
 });
 
 // Indoor Bike Simulation Parameters: wind, gradient, rolling resistance and drag, matching the ride's own physics.
-// (FTMS has no rider weight here; the trainer uses the weight set in its own app, the game uses MASS.)
+// (FTMS has no rider weight here; the trainer uses the weight set in its own app, the ride uses the combined rider and bike weight in Settings.)
 function simParams(gradePct) {
   const d = new DataView(new ArrayBuffer(7));
   d.setUint8(0, OP_SIM);
@@ -1396,26 +1776,61 @@ function simParams(gradePct) {
 
 // about once a second, or sooner when the gradient has moved by more than 0.5 %
 async function sendGrade() {
-  const now = performance.now(), g = Math.max(-20, Math.min(20, grade)) * (grade > 0 ? HILLS : HILLS * 0.5), wait = now - bike.at;
-  if (!bike.point || bike.busy || wait < 250 || (wait < 1000 && Math.abs(g - bike.sent) <= 0.5)) return;
-  bike.busy = true; bike.at = now;
-  const point = bike.point;
-  try { await point.writeValueWithResponse(simParams(g)); bike.sent = g; bike.fails = 0; }
-  catch (err) {
-    // three misses in a row: give up on gradient and carry on with power only
-    if (bike.point === point && ++bike.fails >= 3) { bike.point = null; clearInterval(bike.timer); btLabel(); }
-  }
-  bike.busy = false;
+  const point=bike.point;
+  if(!point || bike.busy)return;
+  const now=performance.now(), watts=$('erg').checked && bike.canErg ? trainingUI.watts : null;
+  const g=trainingUI.paused?0:Math.max(-20,Math.min(20,grade))*(grade>0?HILLS:HILLS*.5);
+  let bytes, command;
+  if(watts!==null && trainingUI.paused && bike.powerRange[0]>0){
+    // A positive minimum target would keep loading the pedals during Pause.
+    bytes=[8,2];command='pause';
+  }else if(watts!==null){
+    const [min,max,step]=bike.powerRange;
+    const target=Math.min(max,Math.max(min,min+Math.round((watts-min)/step)*step));
+    bytes=[5,target&255,(target>>8)&255];command='erg'+target;
+  }else if(bike.canSim){
+    bytes=new Uint8Array(simParams(g).buffer);command='grade'+Math.round(g*2);
+  }else if(bike.lastCommand?.startsWith('erg') || bike.lastCommand==='pause'){
+    bytes=[8,1];command='stop';
+  }else return;
+  if(command===bike.lastCommand && (watts!==null || now-bike.at<1500))return;
+  bike.busy=true;
+  try{
+    if((bike.lastCommand==='stop'||bike.lastCommand==='pause') && (bytes[0]===5||bytes[0]===OP_SIM)){
+      await ftmsAsk(point,[7]);
+    }
+    await ftmsAsk(point,bytes);
+    if(bike.point===point){bike.lastCommand=command;bike.at=now;bike.fails=0;}
+  }catch{
+    if(bike.point===point && ++bike.fails>=3){
+      if(watts!==null){bike.canErg=false;bike.ergDevice=null;bike.lastCommand='erg unavailable';bike.fails=0;}
+      else{bike.point=null;clearInterval(bike.timer);}
+      btLabel();$('ergNote').textContent='Trainer declined resistance control';
+    }
+  }finally{if(!bike.point||bike.point===point)bike.busy=false;}
 }
-
-async function ftmsStart(server) {
-  try {
-    const point = await (await server.getPrimaryService(FTMS)).getCharacteristic(FTMS_POINT);
-    await point.startNotifications();
-    await ftmsAsk(point, [OP_CONTROL]);
-    Object.assign(bike, { point, busy: false, sent: 0, at: 0, fails: 0 });
-    bike.timer = setInterval(sendGrade, 250);
-  } catch (err) { bike.point = null; }                     // no FTMS, or control not given: power only
+async function ftmsStart(server){
+  try{
+    const service=await server.getPrimaryService(FTMS);
+    const point=await service.getCharacteristic(FTMS_POINT);
+    let features=null,range=[0,2000,1];
+    try{features=(await (await service.getCharacteristic(0x2acc)).readValue()).getUint32(4,true);}catch{}
+    try{const v=await (await service.getCharacteristic(0x2ad8)).readValue();range=[v.getInt16(0,true),v.getInt16(2,true),v.getUint16(4,true)||1];}catch{}
+    await point.startNotifications();await ftmsAsk(point,[OP_CONTROL]);
+    Object.assign(bike,{point,busy:false,at:0,fails:0,lastCommand:null,powerRange:range,
+      canErg:features!==null && Boolean(features&8),canSim:features===null || Boolean(features&(1<<13))});
+    clearInterval(bike.timer);bike.timer=setInterval(sendGrade,250);
+  }catch{bike.point=null;}
+}
+async function leaveTrainer(){
+  if(!bike.dev)return;
+  bike.leaving=true;clearInterval(bike.timer);
+  const deadline=performance.now()+3100;
+  while(bike.busy && performance.now()<deadline)await new Promise(resolve=>setTimeout(resolve,50));
+  if(bike.point && !bike.busy){
+    try{await ftmsAsk(bike.point,bike.canSim?new Uint8Array(simParams(0).buffer):[8,1]);}catch{}
+  }
+  try{bike.dev.gatt.disconnect();}catch{}
 }
 
 // give up on a slow Bluetooth step instead of hanging on it
@@ -1427,21 +1842,56 @@ async function useTrainer(dev) {
   let server;
   try { server = await within(dev.gatt.connect(), 8000); }
   catch (err) { try { dev.gatt.disconnect(); } catch {} throw err; }
-  const svc = await server.getPrimaryService('cycling_power');
-  const ch = await svc.getCharacteristic('cycling_power_measurement');
-  await ch.startNotifications();
-  ch.addEventListener('characteristicvaluechanged', e => { st.trainer = true; setTarget(e.target.value.getInt16(2, true)); });
+  let ch,parse,cyclingPower=false;
+  async function notifications(serviceId,characteristicId){
+    const service=await server.getPrimaryService(serviceId);
+    const characteristic=await service.getCharacteristic(characteristicId);
+    await characteristic.startNotifications();
+    return characteristic;
+  }
+  try{
+    ch=await notifications('cycling_power','cycling_power_measurement');
+    parse=window.rideTrainerTelemetry.cyclingPowerReader();
+    cyclingPower=true;
+  }catch{
+    try{ch=await notifications(FTMS,0x2ad2);}
+    catch(error){
+      if(dev!==bike.dev){try{dev.gatt.disconnect();}catch{}}
+      throw error;
+    }
+    parse=window.rideTrainerTelemetry.indoorBike;
+  }
+  bike.telemetryListeners?.abort();
+  const listeners=bike.telemetryListeners=new AbortController();
+  ch.addEventListener('characteristicvaluechanged',e=>{
+    const {watts,cadence}=parse(e.target.value);
+    trainingUI.recordCadence(cadence,cyclingPower?'crank':'bike');
+    if(watts!==null){st.trainer=true;st.target=Math.max(0,watts);trainingUI.recordPower(watts);}
+  },{signal:listeners.signal});
+  trainingUI.setTrainerPending();$('pwr').disabled=true;
   if (!watched.has(dev)) {
     watched.add(dev);
     dev.addEventListener('gattserverdisconnected', () => {
-      st.trainer = false; clearInterval(bike.timer); bike.dev = bike.point = null; btLabel();
-      rejoin(dev);
+      if(bike.dev!==dev)return;
+      bike.telemetryListeners?.abort();
+      st.trainer=false;st.target=0;$('pwr').disabled=false;trainingUI.disconnected();
+      clearInterval(bike.timer); bike.dev = bike.point = null; btLabel();
+      if(!bike.leaving)rejoin(dev);
     });
   }
   bike.dev = bike.known = dev; bike.tries = 0; $('bt').title = dev.name || '';
   try { localStorage.setItem(TRAINER_KEY, JSON.stringify({ id: dev.id, name: dev.name || '' })); } catch {}
   await ftmsStart(server);
   if (dev.gatt.connected) btLabel();
+  // Some dual-service trainers send crank rate only in their indoor-bike packet.
+  if(cyclingPower && !listeners.signal.aborted){
+    try{
+      const indoor=await notifications(FTMS,0x2ad2);
+      indoor.addEventListener('characteristicvaluechanged',e=>{
+        trainingUI.recordCadence(window.rideTrainerTelemetry.indoorBike(e.target.value).cadence,'bike');
+      },{signal:listeners.signal});
+    }catch{}
+  }
 }
 
 // the trainer dropped out (out of range, asleep, a blip): try it again a few times before giving up
@@ -1487,40 +1937,190 @@ $('bt').addEventListener('click', async () => {
 btLabel();
 setHills(HILLS * 100);
 
-/* ---------- ride log: distance ridden, kept in this browser (localStorage) ---------- */
-{
-  const KEY = 'golden-hour-ride-log', MIN = 100;         // rides under 100 m are not kept
-  const load = () => { try { const a = JSON.parse(localStorage.getItem(KEY)); return Array.isArray(a) ? a : []; } catch { return []; } };
-  const ride = { t: new Date().toISOString(), c: COURSE, m: 0, s: 0 };
-  let last = performance.now(), ok = true;
-  const save = () => {
-    const now = performance.now();
-    if (!document.hidden) ride.s += Math.min(10, (now - last) / 1000);
-    last = now; ride.m = Math.round(st.dist);
-    if (ride.m < MIN) return;
-    const all = load().filter(r => r.t !== ride.t); all.push({ ...ride, s: Math.round(ride.s) });
-    try { localStorage.setItem(KEY, JSON.stringify(all.slice(-300))); ok = true; } catch { ok = false; }
-  };
-  const km = m => (m / 1000).toFixed(m < 99950 ? 1 : 0), box = $('log'), btn = $('logbtn');
-  const day = t => new Date(t).toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
-  const mins = s => s < 3600 ? Math.round(s / 60) + ' min' : Math.floor(s / 3600) + ' h ' + Math.round(s % 3600 / 60) + ' min';
-  const draw = () => {
-    const all = load().filter(r => r.t !== ride.t); if (st.dist >= MIN) all.push({ ...ride, m: Math.round(st.dist) });
-    const today = new Date().toDateString(), sum = f => all.filter(f).reduce((a, r) => a + r.m, 0);
-    const rows = all.slice(-10).reverse().map(r => `<tr><td>${day(r.t)}</td><td class="muted">${r.c === 'leckhampton' ? 'Leckhampton' : 'Alps'}</td><td class="muted">${mins(r.s)}</td><td>${km(r.m)} km</td></tr>`).join('');
-    box.innerHTML = `<h3>Ride log</h3><div class="tot"><div><b>${km(sum(r => new Date(r.t).toDateString() === today))}</b><span>km today</span></div>` +
-      `<div><b>${km(sum(() => true))}</b><span>km in total</span></div><div><b>${all.length}</b><span>rides</span></div></div>` +
-      (rows ? `<table>${rows}</table>` : `<div class="muted">Rides appear here after the first 100 m.</div>`) +
-      (ok ? '' : `<div class="muted" style="margin-top:8px">This browser is not letting the page save, so the log will not be kept.</div>`) +
-      (all.length ? `<button id="logclear">Clear log</button>` : '');
-    const c = $('logclear'); if (c) c.onclick = () => { if (confirm('Delete the whole ride log from this browser?')) { try { localStorage.removeItem(KEY); } catch {} st.dist = 0; ride.s = 0; draw(); } };
-  };
-  btn.onclick = () => { box.hidden = !box.hidden; btn.classList.toggle('on', !box.hidden); if (!box.hidden) draw(); };
-  setInterval(() => { save(); if (!box.hidden) draw(); }, 5000);
-  addEventListener('pagehide', save);
-  document.addEventListener('visibilitychange', save);
+const animateTraffic=window.createRideTraffic({THREE,scene,length:LEN,openRoad,poseAt:basePose,makePose:mkPose,course:COURSE,reversed:reverse,groundHeight:meshH,
+  start:roadPosition(st.s),headingAtStart:turned?-1:1,parked:real?.details?.parkedCars||[],
+  buildings:real?.details?.buildings||real?.scenery?.buildings||[],
+  walkHeight(x,z){const n=parkVergeHeight&&nearRoad(x,z);return n?parkVergeHeight(n.i,n.side,n.y,meshH(x,z)):meshH(x,z);}});
+if(real?.scenery)window.buildLakeAccess({THREE,scene,scenery:real.scenery,meshH,nearRoad,asphalt:imgTex(imgAsphalt,true),gravel:imgTex(imgGravel,true)});
+const animatePark=real?.details ? window.buildRichmondPark({THREE,scene,details:real.details,meshH,nearRoad,camera,vergeHeight:parkVergeHeight}) : null;
+const gateMarkers=[];
+const markerGeometry=new THREE.OctahedronGeometry(.28);
+const ghostMarker=new THREE.Mesh(markerGeometry,new THREE.MeshBasicMaterial({color:0x73efd0,transparent:true,opacity:.7}));
+ghostMarker.visible=false;scene.add(ghostMarker);
+const ghostPose=mkPose();
+const signLocations=real?.details?.gateApproaches
+  ? real.details.gateApproaches.map(([name,x,z,metres])=>[`To ${name} · ${Math.round(metres/10)*10} m`,x,z,name+' turn-off'])
+  : [...(real?.gates||[])];
+if(openRoad){
+  for(const [label,index] of [['Col de la Core · 1 395 m',real.summit],['Lac de Bethmale',real.lakeIndex]]){
+    const [x,,z]=real.road[index];signLocations.push([label,x,z]);
+  }
 }
+for(const [x,z,raw,metres,role] of real?.details?.parkingSigns||[]){
+  const name=raw.replace(/car\s?park$/i,'Car Park');
+  const place=role?name+' '+role:name;
+  const sign=metres>=100?'To '+name+' · '+Math.round(metres/10)*10+' m':place;
+  signLocations.push([sign,x,z,metres>=100?name+' turn-off':place]);
+}
+const signGroups=[];
+for(const [name,x,z,place] of signLocations){
+  const nr=nearRoad(x,z);if(!nr)continue;
+  const i=nr.i;
+  let group=signGroups.find(item=>Math.abs(item.i-i)*LEN/N<5);
+  if(!group){group={i,names:[],places:[]};signGroups.push(group);}
+  if(!group.names.includes(name))group.names.push(name);
+  if(place&&!group.places.includes(place))group.places.push(place);
+}
+for(const {i,names} of signGroups){
+  gateMarkers.push([i*LEN/N,names.join(' · ')]);
+  const height=100*names.length,[canvas,ctx]=canvas2d(512,height);
+  ctx.fillStyle='#234d37';ctx.fillRect(0,0,512,height);
+  ctx.strokeStyle='#ecebd7';ctx.lineWidth=5;ctx.strokeRect(4,4,504,height-8);
+  ctx.fillStyle='#fff8db';ctx.font='bold 39px sans-serif';ctx.textAlign='center';
+  names.forEach((name,row)=>ctx.fillText(name,256,row*100+65,480));
+  const texture=new THREE.CanvasTexture(canvas);texture.colorSpace=THREE.SRGBColorSpace;
+  const sign=new THREE.Mesh(new THREE.PlaneGeometry(openRoad?3.4:2.8,.55*names.length),new THREE.MeshBasicMaterial({map:texture}));
+  sign.position.copy(P[i]).addScaledVector(R[i],-5.4);sign.position.y+=1.5;
+  sign.lookAt(sign.position.clone().sub(T[i]));scene.add(sign);
+  const opposite=sign.clone();opposite.rotateY(Math.PI);scene.add(opposite);
+  const post=new THREE.Mesh(new THREE.BoxGeometry(.08,1.5,.08),new THREE.MeshStandardMaterial({color:0x69543d}));
+  post.position.copy(sign.position);post.position.y-=.75;scene.add(post);
+}
+const parkPlaceCue=COURSE==='richmond'?window.createRichmondPlaceCue({
+  markers:signGroups.map(({i,places})=>({station:i*LEN/N,places})),length:LEN,
+  toggle:$('parkPlacesToggle'),setting:$('parkPlacesSetting'),line:$('parkPlaceCue')
+}):null;
+const elevationPreview=window.createElevationPreview({
+  canvas:$('profile'),title:$('profileText'),metrics:$('profileMetrics'),points:P,length:LEN,openRoad,
+  summitIndex:openRoad?nearRoad(ctrl[real.summit].x,ctrl[real.summit].z).i:null
+});
+const trainingUI=window.createRideTraining({course:COURSE,reverse,length:LEN,state:st,openRoad,
+  heightAt:s=>P[pointIndex(Math.floor(bounded(roadPosition(s))/LEN*N))].y,
+  drawElevation:()=>elevationPreview.update(roadPosition(st.s),turned?-1:1,parkPlaceCue?'':gateMarkers.find(([m])=>(roadPosition(m)-st.s+LEN)%LEN<100)?.[1])});
+const richmondSections=COURSE==='richmond'?window.createRichmondSegments({
+  sampleDistance:(x,z)=>nearRoad(x,z).i*LEN/N,length:LEN,initialReverse:reverse,panel:$('richmondSection'),
+  recordingId:()=>trainingUI.recordingId,record:trainingUI.recordSection
+}):null;
+function turn(){
+  richmondSections?.reset();
+  st.s=bounded(LEN-st.s);turned=!turned;reverse=!reverse;
+  refreshRoadPosition();
+  if(!openRoad){
+    const url=new URL(location.href);url.searchParams.set('direction',reverse?'reverse':'forward');
+    history.replaceState(null,'',url);
+  }
+  trainingUI.changeDirection(reverse);
+}
+try{$('summitVoice').checked=localStorage.getItem('ride-summit-voice')!=='off';}catch{}
+$('summitVoice').onchange=()=>{try{localStorage.setItem('ride-summit-voice',$('summitVoice').checked?'on':'off');}catch{}};
+const lakeView=openRoad?window.createLakeView({THREE,course:real,groundHeight:meshH,camera,rig,
+  onPause(active){trainingUI.pauseForView(active);clock.getDelta();}}):null;
+const climb=openRoad?mountainClimb():null;
+$('turnAround').onclick=()=>{turn();climb?.turn();};
+function mountainClimb(){
+  const lineS=index=>{
+    const p=ctrl[index];let nearest=0,best=Infinity;
+    for(let i=0;i<P.length;i++){const d=P[i].distanceToSquared(p);if(d<best){best=d;nearest=i;}}
+    return nearest*LEN/N;
+  };
+  const summit=lineS(real.summit),lake=lineS(real.lakeIndex);
+  let valid=true,seconds=0,held=false,leavingSummit=false,lastDraw=-1;
+  const bestKey=()=>turned?'ride-core-best-bethmale':'ride-core-best-seix';
+  function readBest(){try{return Number(localStorage.getItem(bestKey()))||null;}catch{return null;}}
+  let best=readBest(),splits=[],bestSplits=[];
+  function loadSplits(){
+    try{
+      const record=JSON.parse(localStorage.getItem(bestKey()+'-splits'));
+      return record?.time===best && Array.isArray(record.splits)?record.splits:[];
+    }catch{return [];}
+  }
+  bestSplits=loadSplits();
 
+  const summitAt=()=>roadPosition(summit);
+  const side=()=>turned?'Les Bordes-sur-Lez · Bethmale valley':'Seix';
+  const format=t=>Math.floor(t/60)+':'+String(Math.floor(t%60)).padStart(2,'0');
+  function draw(){
+    $('climbBest').textContent=best?'Personal best · '+format(best):'';
+    const atFloor=st.s>=LEN-.01;
+    const crestDistance=st.s-summitAt();
+    const descending=leavingSummit || crestDistance>1;
+    const valley=turned?'Seix':'Les Bordes-sur-Lez';
+    $('descendPass').hidden=!held && !atFloor;
+    $('descendPass').textContent=atFloor?'Climb from '+valley:'Descend the other side';
+    $('climbSide').textContent=atFloor?'Arrived in '+valley:descending?'Descent to '+valley:side()+' → Col de la Core';
+    const passed=splits.length,last=splits.at(-1);
+    const diff=passed&&Number.isFinite(bestSplits[passed-1])?last-bestSplits[passed-1]:null;
+    $('climbSplit').textContent=passed?'Km '+passed+' · '+format(last)+(diff===null?'':' · '+format(Math.abs(diff))+(diff<=0?' ahead of best':' behind best')):'';
+    let status;
+    if(atFloor)status='Valley floor';
+    else if(held)status='Summit · 1,395 m';
+    else if(descending){
+      const cue=leavingSummit && crestDistance<35 && st.v<.6?'Pedal over the crest':'Descending';
+      status=cue+' · '+((LEN-st.s)/1000).toFixed(1)+' km to valley';
+    }else status=(valid?format(seconds)+' · ':'')+Math.max(0,-crestDistance/1000).toFixed(1)+' km to summit';
+    $('climbTime').textContent=status;
+  }
+  function jump(){valid=false;held=false;leavingSummit=false;seconds=0;splits=[];$('climbResult').textContent='';draw();}
+  function resetAttempt(){best=readBest();bestSplits=loadSplits();jump();valid=st.s<.1;draw();}
+  function navigate(where){
+    const back=where==='lake'?true:startFromBethmale;
+    if(turned!==back)turn();
+    st.s=where==='bottom'?0:roadPosition(where==='lake'?lake:summit);
+    if(where==='bottom'||where==='summit')st.v=0;
+    resetAttempt();trainingUI.resetLap();held=where==='summit';refreshRoadPosition();
+    $('climbNav').open=false;draw();
+  }
+  for(const [id,where] of [['toBottom','bottom'],['toLake','lake'],['toSummit','summit']])$(id).onclick=()=>navigate(where);
+  $('descendPass').onclick=()=>{
+    if(st.s>=LEN-.01){$('turnAround').click();return;}
+    held=false;valid=false;leavingSummit=true;splits=[];
+    $('climbResult').textContent='';draw();
+  };
+  $('climbNav').hidden=false;$('climbStatus').hidden=false;draw();
+  return {jump,turn:resetAttempt,advance(from,distance,elapsed){
+    if(held)return 0;
+    const target=summitAt(),arrived=from<target&&from+distance>=target;
+    const travelled=Math.min(distance,Math.max(0,LEN-from),arrived?target-from:Infinity);
+    if(valid && distance>0){
+      for(let marker=(splits.length+1)*1000;marker<=from+travelled;marker+=1000){
+        splits.push(seconds+elapsed*Math.max(0,marker-from)/distance);
+      }
+      seconds+=elapsed*travelled/distance;
+    }else if(valid&&from>.1){seconds+=elapsed;}
+    if(arrived){
+      held=true;
+      const result=valid?'Summit from '+side()+' in '+format(seconds):'Summit reached · untimed approach';
+      let record='';
+      if(valid){
+        trainingUI.recordClimb(side(),seconds,splits.slice());
+        const previous=readBest();
+        if(!previous || seconds<previous){
+          best=seconds;record=previous?' · personal best by '+format(previous-seconds):' · first timed ascent';
+          try{localStorage.setItem(bestKey(),String(best));localStorage.setItem(bestKey()+'-splits',JSON.stringify({time:best,splits}));}catch{}
+        }
+      }
+      $('climbResult').textContent=result+record;valid=false;
+      if($('summitVoice').checked && 'speechSynthesis' in window)speechSynthesis.speak(new SpeechSynthesisUtterance(result.replace(/(\d+):(\d{2})$/, '$1 minutes $2 seconds')));
+    }
+    if(arrived||performance.now()-lastDraw>250){lastDraw=performance.now();draw();}
+    return travelled;
+  },get nearLake(){return Math.abs(roadPosition(st.s)-lake)<100;},get stopped(){return held||st.s>=LEN;}};
+}
+const mapLandmarks=openRoad?[
+  ['Seix',0],['Col de la Core',real.summit],['Lac de Bethmale',real.lakeIndex],['Les Bordes-sur-Lez',real.road.length-1]
+].map(([label,i])=>({label,x:real.road[i][0],z:real.road[i][2]})):
+  (real?.gates||[]).map(([label,x,z])=>({label,x,z}));
+window.createRouteMap({points:P,length:LEN,name:worlds[COURSE][0],locate:()=>roadPosition(st.s),
+  direction:()=>turned?-1:1,landmarks:mapLandmarks,openRoad,course:COURSE,exportReverse:()=>openRoad?startFromBethmale:reverse});
+function updateProfile(){
+  $('profileMetrics').hidden=!$('profileToggle').checked;
+  $('profileText').hidden=!$('profileToggle').checked;
+  $('terrainStrip').classList.toggle('mapOnly',!$('profileToggle').checked);
+  $('profile').hidden=!$('profileToggle').checked;
+}
+try{$('profileToggle').checked=localStorage.getItem('ride-profile')!=='off';}catch{}
+updateProfile();
+$('profileToggle').onchange=()=>{updateProfile();try{localStorage.setItem('ride-profile',$('profileToggle').checked?'on':'off');}catch{}};
 /* ---------- voice: change the weather, or skip, by speaking ---------- */
 {
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition, btn = $('voice');
@@ -1558,9 +2158,29 @@ setHills(HILLS * 100);
 }
 
 /* ---------- sound: wind and tyres from filtered noise ---------- */
-let audio = null;
+let audio = null, soundOn = false;
+const soundButton = $('sound'),windNoise=$('windNoise');
+try {windNoise.checked=localStorage.getItem('ride-wind')==='on';}catch{}
+windNoise.onchange=()=>{try{localStorage.setItem('ride-wind',windNoise.checked?'on':'off');}catch{}};
+try { soundOn = localStorage.getItem('ride-sound') === 'on'; } catch {}
+function showSound() {
+  soundButton.textContent = soundOn ? 'Sound: on' : 'Sound: off';
+  soundButton.setAttribute('aria-pressed', String(soundOn));
+}
+showSound();
+soundButton.addEventListener('click', () => {
+  soundOn = !soundOn;
+  try { localStorage.setItem('ride-sound', soundOn ? 'on' : 'off'); } catch {}
+  showSound();
+  if (soundOn) startAudio();
+  else if (audio) audio.ac.suspend();
+});
 function startAudio() {
-  if (audio) return;
+  if (!soundOn || graphicsPaused) return;
+  if (audio) {
+    if (audio.ac.state !== 'running') audio.ac.resume();
+    return;
+  }
   const ac = new AudioContext(), buf = ac.createBuffer(1, ac.sampleRate * 2, ac.sampleRate), d = buf.getChannelData(0);
   for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
   const mk = (type, freq, q) => {
@@ -1575,7 +2195,8 @@ function startAudio() {
 addEventListener('pointerdown', startAudio); addEventListener('keydown', startAudio);
 
 /* ---------- ride ---------- */
-const MASS = 80, LANE = -1.75, clock = new THREE.Clock();
+const LANE = openRoad?1.75:-1.75, clock = new THREE.Clock();
+document.addEventListener('visibilitychange',()=>clock.getDelta());
 const pose = mkPose(), ahead = mkPose(), probe = mkPose(), look = new V3(), sunNdc = new V3(), fwd = new V3();
 let lean = 0, phase = 0, grade = 0, huT = 0, first = true;
 // scenery mode's weather, in order, and how many seconds each one stays
@@ -1583,23 +2204,52 @@ const SCENE_PLAN = XMAS ? [['snow', 280], ['mist', 100], ['snow', 180], ['golden
 let scene_t = 0, scene_i = 0;
 if (SCENERY !== null) { setClean(true); st.target = st.power = 90; if (SCENERY === 'nobars') rig.visible = false; }
 
+const recovery=$('graphicsRecovery');
+let graphicsPaused=false;
+recovery.oncancel=event=>event.preventDefault();
+$('reloadGraphics').onclick=()=>location.reload();
+$('c').addEventListener('webglcontextlost',event=>{
+  event.preventDefault();
+  graphicsPaused=true;
+  trainingUI.pauseForGraphics(true);
+  if(audio)audio.ac.suspend();
+  $('graphicsMessage').textContent='The browser interrupted the graphics. Waiting to restore your view…';
+  $('continueGraphics').hidden=true;
+  if(!recovery.open)recovery.showModal();
+});
+$('c').addEventListener('webglcontextrestored',()=>{
+  const weather=Object.keys(WEATHER).find(key=>WEATHER[key]===wxTarget)||'golden';
+  setWeather(weather);
+  renderer.shadowMap.needsUpdate=true;
+  $('graphicsMessage').textContent='Your view is ready. Continue from the same place on the road.';
+  $('continueGraphics').hidden=false;
+  $('continueGraphics').focus();
+});
+$('continueGraphics').onclick=()=>{
+  graphicsPaused=false;
+  recovery.close();
+  trainingUI.pauseForGraphics(false);
+  clock.getDelta();
+  if(soundOn)startAudio();
+};
 function tick() {
-  const dt = Math.min(clock.getDelta(), 0.05);
+  if(graphicsPaused){requestAnimationFrame(tick);return;}
+  const frameTime=clock.getDelta();
+  watchFrameTime(frameTime);
+  const dt = trainingUI.paused || document.hidden ? 0 : Math.min(frameTime, 1);
+  const oldPos=st.s;
+  if(trainingUI.missingPower)st.target=0;
   uTime.value += dt;
 
-  // power -> speed: gravity, rolling resistance and air drag
-  st.power += (st.target - st.power) * Math.min(1, dt * 3);
-  at(st.s, pose);
-  // Descents count half, and above 54 km/h the rider feathers the brakes, so speed does not run away downhill.
-  const v = st.v, slope = pose.t.y > 0 ? pose.t.y : pose.t.y * 0.5, brake = v > 15 ? MASS * 0.5 * (v - 15) : 0;
-  const force = st.power / Math.max(v, 2) - MASS * 9.81 * (slope + 0.004) - 0.5 * 1.2 * 0.32 * v * v - brake;
-  st.v = Math.max(0.5, v + force / MASS * dt);
+  const oldHeight=at(st.s,pose).p.y;
+  const requestedDistance=window.advanceRideMotion(st,dt,s=>at(s,pose).t.y,SCENERY!==null);
   if (SCENERY !== null) {
-    st.v = v + (5 - v) * Math.min(1, dt);                 // a steady 18 km/h, whatever the gradient
     scene_t += dt;
     if (scene_t >= SCENE_PLAN[scene_i][1]) { scene_t = 0; scene_i = (scene_i + 1) % SCENE_PLAN.length; setWeather(SCENE_PLAN[scene_i][0]); }
   }
-  st.s = (st.s + st.v * dt) % LEN; st.dist += st.v * dt;
+  const distance=climb?climb.advance(st.s,requestedDistance,trainingUI.paused||document.hidden?0:frameTime):requestedDistance;
+  st.s=bounded(st.s+distance);st.dist+=distance;
+  if(climb?.stopped)st.v=0;
   grade += (pose.t.y * 100 - grade) * Math.min(1, dt * 2);
 
   // camera: follow the lane, look down the road, lean into bends, rock with the pedals
@@ -1613,32 +2263,48 @@ function tick() {
   camera.position.copy(pose.p).addScaledVector(pose.r, LANE + sway * 0.004 * effort);
   camera.position.y += 1.52;
   look.copy(ahead.p).addScaledVector(ahead.r, LANE); look.y += 0.3;
+  if(openRoad && st.s>LEN-9)look.addScaledVector(pose.t,9-(LEN-st.s));
   camera.lookAt(look);
   camera.rotateZ(-lean);
-  const fov = 62 + Math.min(st.v, 20) * 0.75;
+  lakeView?.update(climb.nearLake);
+  const fov = lakeView?.active ? 62 : 62 + Math.min(st.v, 20) * 0.75;
   if (Math.abs(fov - camera.fov) > 0.01) { camera.fov = fov; camera.updateProjectionMatrix(); }
 
+  trainingUI.tick(oldPos,distance,pose.p.y-oldHeight);
+  parkPlaceCue?.update(roadPosition(st.s),turned?-1:1);
+  richmondSections?.advance(oldPos,distance,dt?frameTime:0,reverse);
+  const ghostS=trainingUI.ghostPosition;
+  ghostMarker.visible=ghostS!=null;
+  if(ghostMarker.visible){
+    at(ghostS,ghostPose);
+    ghostMarker.position.copy(ghostPose.p).addScaledVector(ghostPose.r,LANE);
+    ghostMarker.position.y+=1.6;
+  }
+  animateTraffic(dt,roadPosition(st.s),turned?-1:1);
+  animatePark?.(dt);
   stepWeather(dt);
   rainU.uVel.value.copy(pose.t).multiplyScalar(st.v);
 
   // sun shadow box travels with the rider, pushed forward into the view
   sun.target.position.copy(pose.p).addScaledVector(pose.t, 70);
   sun.position.copy(sun.target.position).addScaledVector(sunDir, 350);
-  let built = false;
-  for (const c of chunks) {
-    const d2 = c.c.distanceToSquared(camera.position);
-    if (d2 < 230 * 230) { if (!c.mesh && !built) { c.mesh = c.build(); built = true; } }
-    else if (c.mesh && d2 > 330 * 330) { scene.remove(c.mesh); c.mesh.dispose(); c.mesh = null; }
+  let nearestChunk=null,nearestDistance=230*230;
+  for(const chunk of chunks){
+    const d2=chunk.c.distanceToSquared(camera.position);
+    if(!chunk.mesh&&d2<nearestDistance){nearestDistance=d2;nearestChunk=chunk;}
+    else if(chunk.mesh&&d2>330*330){scene.remove(chunk.mesh);chunk.mesh.dispose();chunk.mesh=null;}
   }
+  if(nearestChunk)nearestChunk.mesh=nearestChunk.build();
 
   sunNdc.copy(camera.position).addScaledVector(sunDir, 1000).project(camera);
   rays.uniforms.uSunUv.value.set(sunNdc.x * 0.5 + 0.5, sunNdc.y * 0.5 + 0.5);
   rays.uniforms.uAmt.value = 0.25 * wx.rays * smooth(0.1, 0.6, camera.getWorldDirection(fwd).dot(sunDir));
-  lens.uniforms.uSpeed.value = Math.min(1, st.v / 22);
+  rays.enabled = rays.uniforms.uAmt.value > 0.001;
+  lens.uniforms.uSpeed.value = lakeView?.active?0:Math.min(st.v / 22, 1);
   lens.uniforms.uTime.value = uTime.value; lens.uniforms.uRain.value = wx.rain; lens.uniforms.uPaint.value = wx.paint;
-  if (audio) {
+  if (soundOn && audio) {
     const t = audio.ac.currentTime;
-    audio.wind.g.gain.setTargetAtTime(Math.min(0.5, st.v * st.v / 400 * 0.35), t, 0.2);
+    audio.wind.g.gain.setTargetAtTime(windNoise.checked && !lakeView?.active ? Math.min(0.5, st.v * st.v / 400 * 0.35) : 0, t, 0.2);
     audio.wind.f.frequency.setTargetAtTime(300 + st.v * 40, t, 0.2);
     audio.tyre.g.gain.setTargetAtTime(Math.min(0.35, st.v / 15 * 0.25), t, 0.2);
     audio.rain.g.gain.setTargetAtTime(wx.rain * 0.1, t, 0.4);
@@ -1654,8 +2320,12 @@ function tick() {
     $('h-di').textContent = (st.dist / 1000).toFixed(2);
   }
 
+  if(smoothGraphics){
+    shadowAge+=frameTime;
+    if(shadowAge>=0.1){renderer.shadowMap.needsUpdate=true;shadowAge=0;}
+  }
   composer.render();
-  if (first) { first = false; $('loading').style.opacity = 0; setTimeout(() => $('loading').remove(), 900); }
+  if (first) { first=false; loading.querySelector('progress').value=4;loading.querySelector('.arrivalDetail').textContent='Ready to ride';loading.style.pointerEvents='none'; loading.style.opacity=0; setTimeout(()=>loading.remove(),900); }
   requestAnimationFrame(tick);
 }
 tick();
