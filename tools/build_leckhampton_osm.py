@@ -10,9 +10,8 @@ course = json.loads(open('assets/leckhampton.js').read().split(' = ', 2)[2].rstr
 cE, cN = course['origin']; SIZE, CELLS = course['size'], course['cells']; HALF = SIZE / 2
 road = [(p[0], p[2]) for p in course['road']]
 
-# reuse the grid-reference maths from the terrain script without running it
-src = open('tools/build_leckhampton.py').read()
-ns = {'math': math}; exec(src[src.index('def to_bng'):src.index('def read_tiff')], ns); to_bng = ns['to_bng']
+from terrain_grid import to_bng
+
 def local(lat, lon):
     E, N = to_bng(lat, lon); return (E - cE, -(N - cN))
 
