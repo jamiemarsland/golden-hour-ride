@@ -1586,13 +1586,16 @@ setHills(HILLS * 100);
     try { await tx.startNotifications(); } catch {}
     await pad.rx.writeValueWithoutResponse(new TextEncoder().encode('RideOn'));           // the greeting that starts the button messages
   };
-  btn.addEventListener('click', async () => {
+  btn.addEventListener('click', async e => {
     if (!navigator.bluetooth) { label('Needs Chrome or Edge'); return; }
     if (pad.dev) { try { pad.dev.gatt.disconnect(); } catch {} return; }
     let trying = null;
     try {
-      const dev = await navigator.bluetooth.requestDevice({
-        filters: [{ services: [ZRIDE] }, { namePrefix: 'Zwift Ride' }, { services: [SVC] }], optionalServices: [ZRIDE, SVC, 'device_information'] });
+      // Zwift devices are found by their maker's id (0x094A) or name as well as the service, since not all of them list
+      // the service when they announce themselves. Shift-click lists everything nearby, to see what a device calls itself.
+      const want = e.shiftKey ? { acceptAllDevices: true }
+        : { filters: [{ services: [ZRIDE] }, { manufacturerData: [{ companyIdentifier: 0x094A }] }, { namePrefix: 'Zwift' }, { services: [SVC] }] };
+      const dev = await navigator.bluetooth.requestDevice({ ...want, optionalServices: [ZRIDE, SVC, 'device_information'] });
       label('Connecting…');
       const gatt = await dev.gatt.connect(); trying = dev;
       dev.addEventListener('gattserverdisconnected', () => { const was = pad.dev; pad.dev = pad.haptic = pad.rx = null; pad.held = 0; if (was) label('Connect controller'); }, { once: true });
