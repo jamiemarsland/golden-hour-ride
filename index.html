@@ -36,10 +36,21 @@
   #menu .step button { min-width: 34px; padding-left: 0; padding-right: 0; }
   #menu .step input { flex: 1; min-width: 0; accent-color: #ffcf8f; }
   #menu .acts { display: flex; flex-wrap: wrap; gap: 6px; }
-  #menu .foot { display: flex; justify-content: flex-end; padding-top: 10px; border-top: 1px solid rgba(255,255,255,.16); }
+  #menu #helpbtn { min-width: 32px; padding-left: 0; padding-right: 0; font-size: 13px; font-weight: 600; }
+  #help { position: fixed; top: 62px; right: 18px; width: 300px; max-height: calc(100vh - 90px); overflow: auto; box-sizing: border-box; padding: 16px 18px;
+    border-radius: 14px; background: rgba(20,16,12,.8); border: 1px solid rgba(255,255,255,.3); backdrop-filter: blur(8px); font-size: 13px; line-height: 1.5; color: #fff; }
+  #help[hidden] { display: none; }
+  #help h3 { margin: 14px 0 4px; font-size: 10px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; opacity: .7; }
+  #help h3:first-child { margin-top: 0; }
+  #help p { margin: 0 0 4px; }
+  #help dl { display: grid; grid-template-columns: auto 1fr; gap: 3px 12px; margin: 0; }
+  #help dt { opacity: .7; white-space: nowrap; } #help dd { margin: 0; }
+  #help kbd { font: inherit; padding: 0 5px; border: 1px solid rgba(255,255,255,.35); border-radius: 5px; }
+  #help button { margin-top: 14px; font: inherit; font-size: 11px; color: #fff; background: none; border: 1px solid rgba(255,255,255,.35); border-radius: 999px; padding: 5px 12px; cursor: pointer; }
+  #menu .foot { display: flex; justify-content: space-between; align-items: center; padding-top: 10px; border-top: 1px solid rgba(255,255,255,.16); }
   #menu #stop { background: #ffcf8f; border-color: #ffcf8f; color: #2a1b0a; font-weight: 600; text-shadow: none; padding: 8px 16px; }
   #menu #stop:hover { background: #ffdcae; }
-  #wx { display: flex; flex-wrap: wrap; gap: 4px; }
+  #wx, #season { display: flex; flex-wrap: wrap; gap: 4px; }
   #done { position: fixed; left: 50%; top: 46%; transform: translate(-50%, -50%); width: min(360px, calc(100vw - 36px)); box-sizing: border-box; padding: 22px 24px;
     border-radius: 18px; background: rgba(20,16,12,.8); border: 1px solid rgba(255,255,255,.3); backdrop-filter: blur(10px); color: #fff; text-align: center; }
   #done[hidden] { display: none; }
@@ -62,7 +73,7 @@
   #log td:last-child { text-align: right; }
   #log .muted { opacity: .65; }
   #log button { margin-top: 12px; font: inherit; font-size: 11px; color: #fff; background: none; border: 1px solid rgba(255,255,255,.35); border-radius: 999px; padding: 4px 10px; cursor: pointer; }
-  body.clean #hud, body.clean #ctl, body.clean #place, body.clean #menu, body.clean #log, body.clean #credit { display: none; }
+  body.clean #hud, body.clean #ctl, body.clean #place, body.clean #menu, body.clean #help, body.clean #log, body.clean #credit { display: none; }
   body.clean { cursor: none; }
   #credit { position: fixed; right: 14px; bottom: 10px; font-size: 10px; letter-spacing: .04em; opacity: .7; text-shadow: 0 1px 6px rgba(0,0,0,.7); max-width: 46vw; text-align: right; }
 </style>
@@ -83,7 +94,7 @@
   <div id="h-gear" hidden><b id="h-ge">6</b><span>gear</span></div>
 </div>
 <div id="place"><button id="course" title="Choose where to ride. Changing place reloads the ride." aria-expanded="false">Course</button>
-  <div id="places" hidden><button data-q="">Alps</button><button data-q="?theme=christmas">Alps in snow</button><button data-q="?course=leckhampton">Leckhampton Hill</button></div>
+  <div id="places" hidden><button data-p="alps">Alps</button><button data-p="leckhampton">Leckhampton Hill</button></div>
 </div>
 <div id="ctl">
   <button id="bt">Connect trainer</button>
@@ -91,6 +102,8 @@
   <button id="menubtn" aria-label="Menu" aria-expanded="false" title="Weather, gears, hills and more (M key)">⋯</button>
 </div>
 <div id="menu" hidden>
+  <div class="lab">Season</div>
+  <span id="season" title="What the land looks like. Changing season reloads the ride."><button data-s="summer">Summer</button><button data-s="christmas">Christmas</button></span>
   <div class="lab">Weather</div>
   <span id="wx"><button data-w="snow">Snow</button><button data-w="golden" class="on">Golden</button><button data-w="overcast">Overcast</button><button data-w="rain">Rain</button><button data-w="mist">Mist</button></span>
   <div class="step" id="gearrow" hidden title="Virtual gear for a smart trainer. Also the . and , keys, or say “gear up”, “gear down” or “gear four”."><button id="gless" aria-label="Gear down">−</button><span id="gval">Gear 6</span><button id="gmore" aria-label="Gear up">+</button></div>
@@ -102,9 +115,37 @@
     <button id="clean" title="Hide everything on screen (H key, or say “hide”). Press H, click, or say “show” to bring it back">Hide everything</button>
     <button id="obc" title="Connect Zwift Ride handlebars directly, or another controller through the BikeControl app. Shift: gears on a trainer, power without. Left and right: skip. Select and back: change the weather.">Connect controller</button>
   </div>
-  <div class="foot"><button id="stop" title="Stop and see your ride. You can carry on afterwards. Also by voice: “stop”.">Stop ride</button></div>
+  <div class="foot"><button id="helpbtn" aria-label="Help" title="How to ride, voice commands and keys">?</button><button id="stop" title="Stop and see your ride. You can carry on afterwards. Also by voice: “stop”.">Stop ride</button></div>
 </div>
 <div id="log" hidden></div>
+<div id="help" hidden role="dialog" aria-label="Help">
+  <h3>Riding</h3>
+  <p>Click <b>Connect trainer</b> and pedal. It needs Chrome or Edge. With no trainer, set your power with the slider in the menu.</p>
+  <h3>Say it</h3>
+  <p>Turn on <b>Voice</b>, then say:</p>
+  <dl>
+    <dt>Weather</dt><dd>“rain”, “mist”, “overcast”, “sunny”</dd>
+    <dt>Gears</dt><dd>“gear up”, “gear down”, “gear four”</dd>
+    <dt>Hills</dt><dd>“easier”, “harder”</dd>
+    <dt>Move</dt><dd>“skip”, “back”</dd>
+    <dt>Finish</dt><dd>“stop”, “carry on”</dd>
+    <dt>Screen</dt><dd>“hide”, “show”</dd>
+  </dl>
+  <h3>Keys</h3>
+  <dl>
+    <dt><kbd>1</kbd>–<kbd>4</kbd></dt><dd>Weather</dd>
+    <dt><kbd>.</kbd> <kbd>,</kbd></dt><dd>Gear up and down</dd>
+    <dt><kbd>↑</kbd> <kbd>↓</kbd></dt><dd>Power, with no trainer</dd>
+    <dt><kbd>→</kbd> <kbd>←</kbd></dt><dd>Skip 250 m ahead or back</dd>
+    <dt><kbd>H</kbd></dt><dd>Hide everything</dd>
+    <dt><kbd>M</kbd></dt><dd>Menu</dd>
+  </dl>
+  <h3>Gears and hills</h3>
+  <p>Both need a smart trainer. A gear changes how hard the pedals feel. Hills sets how much of each slope you feel: 50 % makes a 10 % climb pedal like 5 %.</p>
+  <h3>Finishing</h3>
+  <p><b>Stop ride</b> shows what you did. From there you can download the ride and upload it to Strava.</p>
+  <button id="helpclose">Close</button>
+</div>
 <div id="done" hidden role="dialog" aria-label="Ride stopped">
   <h3>Ride stopped</h3>
   <div class="stats">
@@ -261,14 +302,21 @@ if (COURSE !== 'valley') {
   real.h = Float32Array.from(q, v => real.demMin + v / 65535 * (real.demMax - real.demMin));     // surveyed ground heights, metres
   $('credit').textContent = real.credit + ' ' + real.osm.credit;
 }
-// where to ride: the Alps valley, the same valley under snow, or the real Leckhampton Hill. Each is built when the page loads, so choosing reloads.
+// Place is where you ride, season is what the land looks like, weather is the sky on top. Place and season are built
+// when the page loads, so choosing either reloads; weather changes at once. Only the Alps has a Christmas so far.
 {
-  const here = real ? '?course=leckhampton' : XMAS ? '?theme=christmas' : '', list = $('places');
+  const PLACE = real ? 'leckhampton' : 'alps', SEASON = XMAS ? 'christmas' : 'summer', list = $('places');
+  const go = (place, season) => { location.search = place === 'leckhampton' ? '?course=leckhampton' : season === 'christmas' ? '?theme=christmas' : ''; };
   for (const b of list.children) {
-    if (b.dataset.q === here) { b.classList.add('on'); $('course').textContent = b.textContent + ' ▾'; }
-    b.addEventListener('click', () => { if (b.dataset.q === here) list.hidden = true; else location.search = b.dataset.q; });
+    if (b.dataset.p === PLACE) { b.classList.add('on'); $('course').textContent = b.textContent + ' ▾'; }
+    b.addEventListener('click', () => { if (b.dataset.p === PLACE) list.hidden = true; else go(b.dataset.p, SEASON); });
   }
   $('course').addEventListener('click', () => { list.hidden = !list.hidden; $('course').setAttribute('aria-expanded', !list.hidden); });
+  for (const b of [...$('season').children]) {
+    if (b.dataset.s === 'christmas' && PLACE !== 'alps') { b.remove(); continue; }
+    b.classList.toggle('on', b.dataset.s === SEASON);
+    b.addEventListener('click', () => { if (b.dataset.s !== SEASON) go(PLACE, b.dataset.s); });
+  }
 }
 function demH(x, z) {                 // the real ground under a point
   const g = real.cells, w = g + 1, f = v => Math.min(g - 1e-6, Math.max(0, (v + real.size / 2) / (real.size / g)));
@@ -1205,7 +1253,7 @@ for (const k in WEATHER) WEATHER[k].snow ??= 0;
 const wx = JSON.parse(JSON.stringify(WEATHER.golden));
 let wxTarget = WEATHER.golden;
 function setWeather(name, instant) {
-  if (!WEATHER[name]) return;
+  if (!WEATHER[name] || !document.querySelector(`#wx [data-w="${name}"]`)) return;   // only the weathers this season offers
   wxTarget = WEATHER[name];
   if (instant) Object.assign(wx, JSON.parse(JSON.stringify(wxTarget)));
   // re-bake what the road and bike reflect, using the new sky
@@ -1239,8 +1287,10 @@ function stepWeather(dt) {
   renderer.toneMappingExposure = wx.expo;
 }
 document.querySelectorAll('#wx button').forEach(b => b.addEventListener('click', () => setWeather(b.dataset.w)));
-if (!XMAS) document.querySelector('#wx [data-w="snow"]')?.remove(); else setWeather('snow', true);
-addEventListener('keydown', e => { const n = ['golden', 'overcast', 'rain', 'mist'][+e.key - 1]; if (n) setWeather(n); });
+// each season has its own weathers: snow only falls at Christmas, and rain on deep snow looks wrong, so Christmas has none
+document.querySelector(`#wx [data-w="${XMAS ? 'rain' : 'snow'}"]`)?.remove();
+if (XMAS) setWeather('snow', true);
+addEventListener('keydown', e => { const b = document.querySelectorAll('#wx button')[+e.key - 1]; if (b) setWeather(b.dataset.w); });   // number keys follow the buttons, left to right
 
 /* ---------- cockpit ---------- */
 const rig = new THREE.Group();
@@ -1456,11 +1506,14 @@ $('again').addEventListener('click', () => { if (st.newRide) st.newRide(); st.di
 const setMenu = open => {
   $('menu').hidden = !open; $('menubtn').classList.toggle('on', open); $('menubtn').textContent = open ? '✕' : '⋯'; $('menubtn').setAttribute('aria-expanded', open);
   if (open && !$('log').hidden) $('logbtn').click();
+  if (open) $('help').hidden = true;
 };
+$('helpbtn').addEventListener('click', () => { setMenu(false); $('help').hidden = false; });
+$('helpclose').addEventListener('click', () => { $('help').hidden = true; });
 $('menubtn').addEventListener('click', () => setMenu($('menu').hidden));
-$('c').addEventListener('click', () => { setMenu(false); $('places').hidden = true; if (!$('log').hidden) $('logbtn').click(); });
+$('c').addEventListener('click', () => { setMenu(false); $('help').hidden = true; $('places').hidden = true; if (!$('log').hidden) $('logbtn').click(); });
 addEventListener('keydown', e => { if ((e.key === 'm' || e.key === 'M') && !e.metaKey && !e.ctrlKey && !e.altKey) setMenu($('menu').hidden); });
-$('logbtn').addEventListener('click', () => setTimeout(() => { if (!$('log').hidden) setMenu(false); }, 0));   // after the log has opened
+$('logbtn').addEventListener('click', () => setTimeout(() => { if (!$('log').hidden) { setMenu(false); $('help').hidden = true; } }, 0));   // after the log has opened
 /* Smart trainer. Power is read from the Cycling Power service. If the trainer also has the Fitness Machine
    Service (FTMS), the game takes control of it and sends the road gradient, so climbs feel harder on the bike.
    Without FTMS, or if the trainer refuses control, it stays power only. */
@@ -1818,6 +1871,7 @@ setHills(HILLS * 100);
     + '|^\\s*(\\d{1,2}|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve)[.!]?\\s*$');
   const gearSaid = m => { const w = m[1] || m[2] || m[3], n = NUM[w] || parseInt(w, 10); if (n >= 1 && n <= GEARS) setGear(n); };
   st.say = heard => { const hit = WORDS.find(w => w[0].test(heard)); if (hit) hit[2](heard.match(hit[0])); return hit ? (typeof hit[1] === 'function' ? hit[1]() : hit[1]) : null; };   // for testing without a microphone
+  const NOW = () => document.querySelector('#wx .on')?.textContent || '';   // the weather actually showing, in case this season has no such weather
   const WORDS = [                      // the first match in what was heard wins
     [GEAR_SAID, () => 'Gear ' + GEAR, gearSaid],
     [/\b(gear down|shift down|change down|lower gear|down a gear)\b/, () => 'Gear ' + GEAR, () => setGear(GEAR - 1)],
@@ -1826,11 +1880,11 @@ setHills(HILLS * 100);
     [/\b(harder|hard|heavier|more|tougher)\b/, () => $('hval').textContent, () => setHills(HILLS * 100 + 20)],
     [/\b(flat|no hills|hills off)\b/, () => $('hval').textContent, () => setHills(0)],
     [/\b(full|real hills|all of it)\b/, () => $('hval').textContent, () => setHills(100)],
-    ...(XMAS ? [[/\b(snow|snowing|snowy|christmas)\b/, 'Snow', () => setWeather('snow')]] : []),
-    [/\b(rain|raining|rainy|storm|wet)\b/, 'Rain', () => setWeather('rain')],
-    [/\b(mist|misty|fog|foggy)\b/, 'Mist', () => setWeather('mist')],
-    [/\b(overcast|cloud|clouds|cloudy|grey|gray)\b/, 'Overcast', () => setWeather('overcast')],
-    [/\b(golden|sun|sunny|sunshine|sunset|clear|evening)\b/, 'Golden', () => setWeather('golden')],
+    ...(XMAS ? [[/\b(snow|snowing|snowy|christmas)\b/, NOW, () => setWeather('snow')]] : []),
+    [/\b(rain|raining|rainy|storm|wet)\b/, NOW, () => setWeather('rain')],
+    [/\b(mist|misty|fog|foggy)\b/, NOW, () => setWeather('mist')],
+    [/\b(overcast|cloud|clouds|cloudy|grey|gray)\b/, NOW, () => setWeather('overcast')],
+    [/\b(golden|sun|sunny|sunshine|sunset|clear|evening)\b/, NOW, () => setWeather('golden')],
     [/\b(stop|pause|finish)\b/, 'Stopped', () => stopRide()],
     [/\b(keep riding|carry on|resume|continue|start)\b/, 'Riding', () => resumeRide()],
     [/\b(skip|forward|ahead)\b/, 'Skip ahead', () => skip(250)],
