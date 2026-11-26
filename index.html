@@ -55,18 +55,19 @@
   <div><b id="h-sp">0.0</b><span>km/h</span></div>
   <div><b id="h-gr">0.0</b><span>gradient %</span></div>
   <div><b id="h-di">0.00</b><span>km</span></div>
+  <div id="h-gear" hidden><b id="h-ge">6</b><span>gear</span></div>
 </div>
 <div id="ctl">
   <span>POWER</span>
   <input id="pwr" type="range" min="0" max="600" step="5" value="220" aria-label="Power in watts">
   <span>↑ ↓ keys</span>
   <button id="skip" title="Jump 250 m up the road (→ key; ← goes back)">Skip 250 m ›</button>
-  <button id="voice" title="Say: rain, mist, overcast, sunny, skip, back, hide or show. For a smart trainer: easier or gear down, harder or gear up, flat, full">Voice: off</button>
+  <button id="voice" title="Say: rain, mist, overcast, sunny, skip, back, hide or show. For a smart trainer: gear up, gear down, easier, harder, flat, full">Voice: off</button>
   <button id="course" title="Switch between the invented valley and the real Leckhampton Hill loop">Course</button>
   <span id="wx"><button data-w="snow">Snow</button><button data-w="golden" class="on">Golden</button><button data-w="overcast">Overcast</button><button data-w="rain">Rain</button><button data-w="mist">Mist</button><button data-w="starry">Starry</button></span>
   <button id="bt">Connect trainer</button>
   <span id="hills" title="How much of each hill a smart trainer makes you feel. Turn it down if the climbs are too hard; 0 % is flat."><button id="hless" aria-label="Make hills easier">−</button><span id="hval">Hills 50 %</span><button id="hmore" aria-label="Make hills harder">+</button></span>
-  <button id="obc" title="Connect Zwift Ride handlebars directly, or another controller through the BikeControl app. Shift: hills on a trainer, power without. Left and right: skip. Select and back: change the weather.">Connect controller</button>
+  <button id="obc" title="Connect Zwift Ride handlebars directly, or another controller through the BikeControl app. Shift: gears on a trainer, power without. Left and right: skip. Select and back: change the weather.">Connect controller</button>
   <button id="clean" title="Hide everything on screen (H key, or say “hide”). Press H, click, or say “show” to bring it back">Hide info</button>
   <button id="logbtn" title="Distance you have ridden, kept in this browser">Log</button>
 </div>
@@ -1329,6 +1330,8 @@ addEventListener('keydown', e => {
   if (e.key === 'ArrowDown') setTarget(st.target - 10);
   if (e.key === 'ArrowRight') skip(250);
   if (e.key === 'ArrowLeft') skip(-250);
+  if (e.key === '.' || e.key === '>') setGear(GEAR + 1);
+  if (e.key === ',' || e.key === '<') setGear(GEAR - 1);
 });
 $('pwr').addEventListener('input', e => { st.target = +e.target.value; });
 
@@ -1359,6 +1362,18 @@ const setHills = pct => {
   try { localStorage.setItem(HILLS_KEY, String(Math.round(HILLS * 100))); } catch {}
   $('hval').textContent = HILLS ? 'Hills ' + Math.round(HILLS * 100) + ' %' : 'Hills off';
   bike.at = 0;                                      // tell the trainer straight away
+};
+// Virtual gears, for a smart trainer that takes the gradient. There is no real chain to move, so a gear change
+// nudges the gradient the trainer is told: each gear above the middle one feels like 0.7 % more slope, each one
+// below like 0.7 % less. It works on the flat too, and never changes your speed in the game, only how the pedals feel.
+const GEARS = 12, GEAR_MID = 6, GEAR_STEP = 0.7;
+let GEAR = GEAR_MID;
+st.bike = bike; st.sendGrade = () => sendGrade();   // for testing without a trainer
+const setGear = n => {
+  GEAR = Math.max(1, Math.min(GEARS, Math.round(n)));
+  $('h-ge').textContent = GEAR;
+  bike.at = 0;                                      // tell the trainer straight away
+  return 'Gear ' + GEAR;
 };
 const TRAINER_KEY = 'golden-hour-ride-trainer';     // the last trainer used: { id, name }, kept in this browser
 const lastTrainer = () => { try { return JSON.parse(localStorage.getItem(TRAINER_KEY)) || null; } catch { return null; } };
@@ -1397,7 +1412,8 @@ function simParams(gradePct) {
 
 // about once a second, or sooner when the gradient has moved by more than 0.5 %
 async function sendGrade() {
-  const now = performance.now(), g = Math.max(-20, Math.min(20, grade)) * (grade > 0 ? HILLS : HILLS * 0.5), wait = now - bike.at;
+  const hill = Math.max(-20, Math.min(20, grade)) * (grade > 0 ? HILLS : HILLS * 0.5);
+  const now = performance.now(), g = Math.max(-20, Math.min(20, hill + (GEAR - GEAR_MID) * GEAR_STEP)), wait = now - bike.at;
   if (!bike.point || bike.busy || wait < 250 || (wait < 1000 && Math.abs(g - bike.sent) <= 0.5)) return;
   bike.busy = true; bike.at = now;
   const point = bike.point;
@@ -1496,7 +1512,7 @@ setHills(HILLS * 100);
 {
   const SVC = 'd273f680-d548-419d-b9d1-fa0472345229', BUTTONS = 'd273f681-d548-419d-b9d1-fa0472345229',
     HAPTIC = 'd273f682-d548-419d-b9d1-fa0472345229', APPINFO = 'd273f683-d548-419d-b9d1-fa0472345229';
-  const ZRIDE = 0xfc82, Z_ASYNC = '00000002-19ca-4651-86e5-fa29dcdd09d1', Z_RX = '00000003-19ca-4651-86e5-fa29dcdd09d1',
+  const ZRIDE = 0xfc82, ZOLD = '00000001-19ca-4651-86e5-fa29dcdd09d1', Z_ASYNC = '00000002-19ca-4651-86e5-fa29dcdd09d1', Z_RX = '00000003-19ca-4651-86e5-fa29dcdd09d1',
     Z_TX = '00000004-19ca-4651-86e5-fa29dcdd09d1';
   const btn = $('obc'), pad = { dev: null, haptic: null, down: new Set(), rx: null, held: 0 };
   const label = t => { btn.textContent = t; btn.classList.toggle('on', !!pad.dev); };
@@ -1504,8 +1520,8 @@ setHills(HILLS * 100);
     const all = [...document.querySelectorAll('#wx button')], i = all.findIndex(b => b.classList.contains('on'));
     const next = all[(Math.max(0, i) + step + all.length) % all.length]; setWeather(next.dataset.w); return next.textContent;
   };
-  const shift = up => {                                   // on a smart trainer a shift changes how much hill you feel; without one, the power
-    if (bike.dev) { setHills(HILLS * 100 + (up ? 10 : -10)); return $('hval').textContent; }
+  const shift = up => {                                   // on a smart trainer a shift changes gear; without one, the power
+    if (bike.dev) return setGear(GEAR + (up ? 1 : -1));
     setTarget(st.target + (up ? 10 : -10)); return st.target + ' W';
   };
   const power = d => { setTarget(st.target + d); return st.target + ' W'; };
@@ -1567,24 +1583,31 @@ setHills(HILLS * 100);
     if (said !== null) { label('Controller: ' + said); if (fresh & (0x3300 | PADDLE_L | PADDLE_R)) buzz(); }
   };
   st.zpad = bytes => onRide(new DataView(new Uint8Array(bytes).buffer));                    // for testing without the handlebars
+  // run one step of connecting with its name on the button, and give up if the device does not answer in time
+  const step = (text, promise, ms = 12000) => {
+    label(text);
+    return Promise.race([promise, new Promise((_, no) => setTimeout(() => no(Object.assign(new Error('no answer'), { stuck: text })), ms))]);
+  };
   const joinRide = async gatt => {
-    let svc;
-    try { svc = await gatt.getPrimaryService(ZRIDE); }
-    catch {                                              // newer handlebars hide this until Zwift itself has unlocked them
-      let fw = ''; try { fw = new TextDecoder().decode(await (await (await gatt.getPrimaryService('device_information')).getCharacteristic('firmware_revision_string')).readValue()); } catch {}
-      throw Object.assign(new Error('locked'), { locked: true, fw });
+    let svc = null;
+    for (const id of [ZRIDE, ZOLD]) { try { svc = await step('Looking for buttons…', gatt.getPrimaryService(id)); break; } catch (err) { if (err.stuck) throw err; } }
+    if (!svc) {                                          // newer handlebars hide this until Zwift itself has unlocked them
+      let fw = '', seen = '';
+      try { fw = new TextDecoder().decode(await step('Checking…', (async () => (await (await gatt.getPrimaryService('device_information')).getCharacteristic('firmware_revision_string')).readValue())(), 5000)); } catch {}
+      try { seen = (await step('Checking…', gatt.getPrimaryServices(), 5000)).map(x => x.uuid).join(', '); } catch {}
+      throw Object.assign(new Error('locked'), { locked: true, fw, seen });
     }
-    const inbox = await svc.getCharacteristic(Z_ASYNC), tx = await svc.getCharacteristic(Z_TX);
-    pad.rx = await svc.getCharacteristic(Z_RX);
+    const inbox = await step('Starting…', svc.getCharacteristic(Z_ASYNC)), tx = await step('Starting…', svc.getCharacteristic(Z_TX));
+    pad.rx = await step('Starting…', svc.getCharacteristic(Z_RX));
     inbox.addEventListener('characteristicvaluechanged', e => {
       const d = e.target.value;                           // keep the last few raw messages in the button's tooltip, to help if a button does nothing
       pad.seen = [...(pad.seen || []), [...new Uint8Array(d.buffer, d.byteOffset, d.byteLength)].map(b => b.toString(16).padStart(2, '0')).join(' ')].slice(-4);
       btn.title = 'Last messages from the handlebars:\n' + pad.seen.join('\n');
       onRide(d);
     });
-    await inbox.startNotifications();
-    try { await tx.startNotifications(); } catch {}
-    await pad.rx.writeValueWithoutResponse(new TextEncoder().encode('RideOn'));           // the greeting that starts the button messages
+    await step('Starting…', inbox.startNotifications());
+    try { await step('Starting…', tx.startNotifications(), 4000); } catch {}
+    await step('Saying hello…', pad.rx.writeValueWithoutResponse(new TextEncoder().encode('RideOn')));   // the greeting that starts the button messages
   };
   btn.addEventListener('click', async e => {
     if (!navigator.bluetooth) { label('Needs Chrome or Edge'); return; }
@@ -1594,12 +1617,12 @@ setHills(HILLS * 100);
       // Zwift devices are found by their maker's id (0x094A) or name as well as the service, since not all of them list
       // the service when they announce themselves. Shift-click lists everything nearby, to see what a device calls itself.
       const want = e.shiftKey ? { acceptAllDevices: true }
-        : { filters: [{ services: [ZRIDE] }, { manufacturerData: [{ companyIdentifier: 0x094A }] }, { namePrefix: 'Zwift' }, { services: [SVC] }] };
-      const dev = await navigator.bluetooth.requestDevice({ ...want, optionalServices: [ZRIDE, SVC, 'device_information'] });
-      label('Connecting…');
-      const gatt = await dev.gatt.connect(); trying = dev;
+        : { filters: [{ services: [ZRIDE] }, { services: [ZOLD] }, { manufacturerData: [{ companyIdentifier: 0x094A }] }, { namePrefix: 'Zwift' }, { services: [SVC] }] };
+      const dev = await navigator.bluetooth.requestDevice({ ...want, optionalServices: [ZRIDE, ZOLD, SVC, 'device_information'] });
+      trying = dev; pad.name = dev.name || 'unnamed device';
+      const gatt = await step('Connecting…', dev.gatt.connect(), 20000);
       dev.addEventListener('gattserverdisconnected', () => { const was = pad.dev; pad.dev = pad.haptic = pad.rx = null; pad.held = 0; if (was) label('Connect controller'); }, { once: true });
-      let svc = null; try { svc = await gatt.getPrimaryService(SVC); } catch {}
+      let svc = null; try { svc = await step('Looking for buttons…', gatt.getPrimaryService(SVC)); } catch (err) { if (err.stuck) throw err; }
       if (!svc) { await joinRide(gatt); pad.dev = dev; label('Controller: ready'); return; }
       const ch = await svc.getCharacteristic(BUTTONS);
       ch.addEventListener('characteristicvaluechanged', e => onButtons(e.target.value));
@@ -1615,8 +1638,12 @@ setHills(HILLS * 100);
     } catch (err) {
       if (pad.dev) return;
       try { if (trying) trying.gatt.disconnect(); } catch {}
-      label(err && err.name === 'NotFoundError' ? 'Connect controller' : err && err.locked ? 'Controller locked: open Zwift first' : 'Controller: failed');
-      if (err && err.locked) btn.title = 'These handlebars' + (err.fw ? ' (firmware ' + err.fw.trim() + ')' : '') + ' only answer other apps after Zwift has unlocked them. Open Zwift, let it connect to the handlebars, close it, then try again.';
+      const picked = !(err && err.name === 'NotFoundError' && !trying);
+      label(!picked ? 'Connect controller' : err && err.locked ? 'Controller locked: open Zwift first' : err && err.stuck ? 'No answer: ' + err.stuck.replace('…', '').toLowerCase() : 'Controller: failed');
+      if (picked) btn.title = pad.name + (err && err.locked
+        ? (err.fw ? ' (firmware ' + err.fw.trim() + ')' : '') + ' connected, but is not offering its buttons. Newer Zwift handlebars only answer other apps after Zwift has unlocked them: open Zwift, let it connect to the handlebars, close it, then try again. It offered: ' + (err.seen || 'nothing we may read')
+        : err && err.stuck ? ' did not answer while: ' + err.stuck + ' If two devices share a name, try the other one. Wake it with a button press and make sure nothing else is connected to it.'
+        : ' failed with: ' + (err && (err.message || err.name)));
     }
   });
 }
@@ -1659,8 +1686,10 @@ setHills(HILLS * 100);
 {
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition, btn = $('voice');
   const WORDS = [                      // the first match in what was heard wins
-    [/\b(easier|easy|lighter|less|ease|gear down|shift down|change down|lower gear|down a gear)\b/, () => $('hval').textContent, () => setHills(HILLS * 100 - 20)],
-    [/\b(harder|hard|heavier|more|tougher|gear up|shift up|change up|higher gear|up a gear)\b/, () => $('hval').textContent, () => setHills(HILLS * 100 + 20)],
+    [/\b(gear down|shift down|change down|lower gear|down a gear)\b/, () => 'Gear ' + GEAR, () => setGear(GEAR - 1)],
+    [/\b(gear up|shift up|change up|higher gear|up a gear)\b/, () => 'Gear ' + GEAR, () => setGear(GEAR + 1)],
+    [/\b(easier|easy|lighter|less|ease)\b/, () => $('hval').textContent, () => setHills(HILLS * 100 - 20)],
+    [/\b(harder|hard|heavier|more|tougher)\b/, () => $('hval').textContent, () => setHills(HILLS * 100 + 20)],
     [/\b(flat|no hills|hills off)\b/, () => $('hval').textContent, () => setHills(0)],
     [/\b(full|real hills|all of it)\b/, () => $('hval').textContent, () => setHills(100)],
     ...(XMAS ? [[/\b(snow|snowing|snowy|christmas)\b/, 'Snow', () => setWeather('snow')]] : []),
@@ -1786,6 +1815,7 @@ function tick() {
     $('h-sp').textContent = (st.v * 3.6).toFixed(1);
     $('h-gr').textContent = (grade >= 0 ? '+' : '') + grade.toFixed(1);
     $('h-di').textContent = (st.dist / 1000).toFixed(2);
+    $('h-gear').hidden = !bike.point;                       // gears only mean something while a trainer is taking the gradient
   }
 
   composer.render();
