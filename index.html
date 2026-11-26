@@ -66,7 +66,7 @@
   <span id="wx"><button data-w="snow">Snow</button><button data-w="golden" class="on">Golden</button><button data-w="overcast">Overcast</button><button data-w="rain">Rain</button><button data-w="mist">Mist</button><button data-w="starry">Starry</button></span>
   <button id="bt">Connect trainer</button>
   <span id="hills" title="How much of each hill a smart trainer makes you feel. Turn it down if the climbs are too hard; 0 % is flat."><button id="hless" aria-label="Make hills easier">−</button><span id="hval">Hills 50 %</span><button id="hmore" aria-label="Make hills harder">+</button></span>
-  <button id="obc" title="Connect a handlebar controller (Zwift Click, Play or Ride and others) through the BikeControl app. Shift: hills on a trainer, power without. Left and right: skip. Select and back: change the weather.">Connect controller</button>
+  <button id="obc" title="Connect Zwift Ride handlebars directly, or another controller through the BikeControl app. Shift: hills on a trainer, power without. Left and right: skip. Select and back: change the weather.">Connect controller</button>
   <button id="clean" title="Hide everything on screen (H key, or say “hide”). Press H, click, or say “show” to bring it back">Hide info</button>
   <button id="logbtn" title="Distance you have ridden, kept in this browser">Log</button>
 </div>
@@ -1488,13 +1488,17 @@ $('bt').addEventListener('click', async () => {
 btLabel();
 setHills(HILLS * 100);
 
-/* ---------- handlebar controller, over the open OpenBikeControl protocol (Bluetooth) ----------
-   The BikeControl app (or any OpenBikeControl device) turns a Zwift Click, Play or Ride and others into simple
-   button messages: [0x01, button, state, button, state, ...]. We act when a button goes down. */
+/* ---------- handlebar controller (Bluetooth) ----------
+   Two kinds connect here. Zwift Ride handlebars talk to the ride directly: after a "RideOn" greeting they send
+   [0x23, protobuf], where field 1 is a bit per button (a 0 bit means pressed) and field 3 lists the two paddles.
+   Anything speaking the open OpenBikeControl protocol (the BikeControl app, some bikes) sends
+   [0x01, button, state, button, state, ...]. Either way we act when a button goes down. */
 {
   const SVC = 'd273f680-d548-419d-b9d1-fa0472345229', BUTTONS = 'd273f681-d548-419d-b9d1-fa0472345229',
     HAPTIC = 'd273f682-d548-419d-b9d1-fa0472345229', APPINFO = 'd273f683-d548-419d-b9d1-fa0472345229';
-  const btn = $('obc'), pad = { dev: null, haptic: null, down: new Set() };
+  const ZRIDE = 0xfc82, Z_ASYNC = '00000002-19ca-4651-86e5-fa29dcdd09d1', Z_RX = '00000003-19ca-4651-86e5-fa29dcdd09d1',
+    Z_TX = '00000004-19ca-4651-86e5-fa29dcdd09d1';
+  const btn = $('obc'), pad = { dev: null, haptic: null, down: new Set(), rx: null, held: 0 };
   const label = t => { btn.textContent = t; btn.classList.toggle('on', !!pad.dev); };
   const weather = step => {
     const all = [...document.querySelectorAll('#wx button')], i = all.findIndex(b => b.classList.contains('on'));
@@ -1524,17 +1528,80 @@ setHills(HILLS * 100);
     }
   };
   st.pad = bytes => onButtons(new DataView(new Uint8Array(bytes).buffer));               // for testing without a controller
+
+  // Zwift Ride handlebars. Right-hand shifters and paddle change up, left-hand ones change down, as in Zwift.
+  const ZBTN = [
+    [0x0001, () => (skip(-250), 'Skip back')], [0x0004, () => (skip(250), 'Skip ahead')],   // pad left, right
+    [0x0002, () => power(10)], [0x0008, () => power(-10)],                                  // pad up, down
+    [0x0010, () => weather(1)], [0x0020, () => weather(-1)],                                // A, B
+    [0x0040, () => (setClean(!isClean()), isClean() ? 'Info hidden' : 'Info shown')],       // Y
+    [0x0100, () => shift(false)], [0x0200, () => shift(false)],                             // left shifters
+    [0x1000, () => shift(true)], [0x2000, () => shift(true)]];                              // right shifters
+  const PADDLE_L = 0x10000, PADDLE_R = 0x20000;                                             // our own bits for the two paddles
+  const buzz = () => { if (pad.rx) pad.rx.writeValueWithoutResponse(new Uint8Array([0x12, 0x12, 0x08, 0x0A, 0x06, 0x08, 0x02, 0x10, 0x00, 0x18, 0x20])).catch(() => {}); };
+  const onRide = d => {
+    if (d.byteLength < 2 || d.getUint8(0) !== 0x23) return;                                 // 0x23: the buttons changed
+    let i = 1, map = 0xFFFFFFFF, held = 0;
+    const varint = () => { let v = 0, sh = 0, b; do { b = d.getUint8(i++); if (sh < 35) v += (b & 0x7F) * 2 ** sh; sh += 7; } while (b & 0x80); return v; };
+    try {
+      while (i < d.byteLength) {
+        const tag = varint(), field = tag >>> 3, wire = tag & 7;
+        if (wire === 0) { const v = varint(); if (field === 1) map = v >>> 0; }
+        else if (wire === 2) {
+          const len = varint(), end = i + len;
+          if (field === 3) {                                                                // one paddle: which side, and how far it is pulled
+            let side = 0, pull = 0;
+            while (i < end) { const t = varint(), v = varint(); if (t >>> 3 === 1) side = v; if (t >>> 3 === 2) pull = (v >>> 1) ^ -(v & 1); }
+            if (Math.abs(pull) >= 25) held |= side === 0 ? PADDLE_L : side === 1 ? PADDLE_R : 0;
+          }
+          i = end;
+        } else return;
+      }
+    } catch { return; }
+    held |= ~map & 0xFFFF;
+    const fresh = held & ~pad.held; pad.held = held;
+    let said = null;
+    for (const [bit, act] of ZBTN) if (fresh & bit) said = act();
+    if (fresh & PADDLE_L) said = shift(false);
+    if (fresh & PADDLE_R) said = shift(true);
+    if (said !== null) { label('Controller: ' + said); if (fresh & (0x3300 | PADDLE_L | PADDLE_R)) buzz(); }
+  };
+  st.zpad = bytes => onRide(new DataView(new Uint8Array(bytes).buffer));                    // for testing without the handlebars
+  const joinRide = async gatt => {
+    let svc;
+    try { svc = await gatt.getPrimaryService(ZRIDE); }
+    catch {                                              // newer handlebars hide this until Zwift itself has unlocked them
+      let fw = ''; try { fw = new TextDecoder().decode(await (await (await gatt.getPrimaryService('device_information')).getCharacteristic('firmware_revision_string')).readValue()); } catch {}
+      throw Object.assign(new Error('locked'), { locked: true, fw });
+    }
+    const inbox = await svc.getCharacteristic(Z_ASYNC), tx = await svc.getCharacteristic(Z_TX);
+    pad.rx = await svc.getCharacteristic(Z_RX);
+    inbox.addEventListener('characteristicvaluechanged', e => {
+      const d = e.target.value;                           // keep the last few raw messages in the button's tooltip, to help if a button does nothing
+      pad.seen = [...(pad.seen || []), [...new Uint8Array(d.buffer, d.byteOffset, d.byteLength)].map(b => b.toString(16).padStart(2, '0')).join(' ')].slice(-4);
+      btn.title = 'Last messages from the handlebars:\n' + pad.seen.join('\n');
+      onRide(d);
+    });
+    await inbox.startNotifications();
+    try { await tx.startNotifications(); } catch {}
+    await pad.rx.writeValueWithoutResponse(new TextEncoder().encode('RideOn'));           // the greeting that starts the button messages
+  };
   btn.addEventListener('click', async () => {
     if (!navigator.bluetooth) { label('Needs Chrome or Edge'); return; }
     if (pad.dev) { try { pad.dev.gatt.disconnect(); } catch {} return; }
+    let trying = null;
     try {
-      const dev = await navigator.bluetooth.requestDevice({ filters: [{ services: [SVC] }] });
+      const dev = await navigator.bluetooth.requestDevice({
+        filters: [{ services: [ZRIDE] }, { namePrefix: 'Zwift Ride' }, { services: [SVC] }], optionalServices: [ZRIDE, SVC, 'device_information'] });
       label('Connecting…');
-      const svc = await (await dev.gatt.connect()).getPrimaryService(SVC), ch = await svc.getCharacteristic(BUTTONS);
+      const gatt = await dev.gatt.connect(); trying = dev;
+      dev.addEventListener('gattserverdisconnected', () => { const was = pad.dev; pad.dev = pad.haptic = pad.rx = null; pad.held = 0; if (was) label('Connect controller'); }, { once: true });
+      let svc = null; try { svc = await gatt.getPrimaryService(SVC); } catch {}
+      if (!svc) { await joinRide(gatt); pad.dev = dev; label('Controller: ready'); return; }
+      const ch = await svc.getCharacteristic(BUTTONS);
       ch.addEventListener('characteristicvaluechanged', e => onButtons(e.target.value));
       await ch.startNotifications();
       pad.dev = dev; pad.down.clear();
-      dev.addEventListener('gattserverdisconnected', () => { pad.dev = pad.haptic = null; label('Connect controller'); }, { once: true });
       try { pad.haptic = await svc.getCharacteristic(HAPTIC); } catch { pad.haptic = null; }
       try {                                              // tell the controller who we are and which buttons we use
         const txt = t => [t.length, ...new TextEncoder().encode(t)], ids = Object.keys(ACT).map(Number);
@@ -1542,7 +1609,12 @@ setHills(HILLS * 100);
         await info.writeValueWithoutResponse(new Uint8Array([0x04, 0x01, ...txt('golden-hour-ride'), ...txt('1.0'), ids.length, ...ids]));
       } catch {}
       label('Controller: ready');
-    } catch (err) { if (!pad.dev) label(err && err.name === 'NotFoundError' ? 'Connect controller' : 'Controller: failed'); }
+    } catch (err) {
+      if (pad.dev) return;
+      try { if (trying) trying.gatt.disconnect(); } catch {}
+      label(err && err.name === 'NotFoundError' ? 'Connect controller' : err && err.locked ? 'Controller locked: open Zwift first' : 'Controller: failed');
+      if (err && err.locked) btn.title = 'These handlebars' + (err.fw ? ' (firmware ' + err.fw.trim() + ')' : '') + ' only answer other apps after Zwift has unlocked them. Open Zwift, let it connect to the handlebars, close it, then try again.';
+    }
   });
 }
 
