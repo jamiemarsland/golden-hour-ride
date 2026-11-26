@@ -35,6 +35,17 @@
   #menu .step input { flex: 1; min-width: 0; accent-color: #ffcf8f; }
   #menu .acts { display: flex; flex-wrap: wrap; gap: 6px; }
   #wx { display: flex; flex-wrap: wrap; gap: 4px; }
+  #done { position: fixed; left: 50%; top: 46%; transform: translate(-50%, -50%); width: min(360px, calc(100vw - 36px)); box-sizing: border-box; padding: 22px 24px;
+    border-radius: 18px; background: rgba(20,16,12,.8); border: 1px solid rgba(255,255,255,.3); backdrop-filter: blur(10px); color: #fff; text-align: center; }
+  #done[hidden] { display: none; }
+  #done h3 { margin: 0 0 16px; font-size: 11px; font-weight: 600; letter-spacing: .16em; text-transform: uppercase; opacity: .75; }
+  #done .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 16px 10px; margin-bottom: 20px; font-variant-numeric: tabular-nums; }
+  #done .stats b { display: block; font-size: 28px; font-weight: 300; }
+  #done .stats span { font-size: 10px; letter-spacing: .14em; text-transform: uppercase; opacity: .7; }
+  #done .acts { display: flex; justify-content: center; gap: 8px; }
+  #done button { font: inherit; font-size: 12px; letter-spacing: .06em; color: #fff; background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.4); border-radius: 999px; padding: 9px 16px; cursor: pointer; }
+  #done button:hover { background: rgba(255,255,255,.25); }
+  #done #resume { background: rgba(255,255,255,.3); border-color: #fff; }
   #log { position: fixed; top: 62px; right: 18px; width: 270px; max-height: 70vh; overflow: auto; padding: 14px 16px; border-radius: 14px;
     background: rgba(20,16,12,.72); border: 1px solid rgba(255,255,255,.3); backdrop-filter: blur(8px); font-size: 13px; color: #fff; }
   #log h3 { margin: 0 0 8px; font-size: 11px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; opacity: .75; }
@@ -69,7 +80,7 @@
 <div id="place"><button id="course" title="Switch between the invented valley and the real Leckhampton Hill loop">Course</button></div>
 <div id="ctl">
   <button id="bt">Connect trainer</button>
-  <button id="voice" title="Say: rain, mist, overcast, sunny, skip, back, hide or show. For a smart trainer: gear up, gear down, a gear number such as “four” or “gear four”, easier, harder, flat, full">Voice: off</button>
+  <button id="voice" title="Say: rain, mist, overcast, sunny, skip, back, stop, carry on, hide or show. For a smart trainer: gear up, gear down, a gear number such as “four” or “gear four”, easier, harder, flat, full">Voice: off</button>
   <button id="menubtn" aria-label="Menu" aria-expanded="false" title="Weather, gears, hills and more (M key)">⋯</button>
 </div>
 <div id="menu" hidden>
@@ -79,6 +90,7 @@
   <div class="step" id="hills" title="How much of each hill a smart trainer makes you feel. Turn it down if the climbs are too hard; 0 % is flat."><button id="hless" aria-label="Make hills easier">−</button><span id="hval">Hills 50 %</span><button id="hmore" aria-label="Make hills harder">+</button></div>
   <div class="step" id="pwrrow" title="Your power when no trainer is connected. Also the ↑ and ↓ keys."><span>Power</span><input id="pwr" type="range" min="0" max="600" step="5" value="220" aria-label="Power in watts"></div>
   <div class="acts">
+    <button id="stop" title="Stop and see your ride. You can carry on afterwards. Also by voice: “stop”.">Stop ride</button>
     <button id="skip" title="Jump 250 m up the road (→ key; ← goes back)">Skip 250 m ›</button>
     <button id="logbtn" title="Distance you have ridden, kept in this browser">Ride log</button>
     <button id="clean" title="Hide everything on screen (H key, or say “hide”). Press H, click, or say “show” to bring it back">Hide everything</button>
@@ -86,6 +98,15 @@
   </div>
 </div>
 <div id="log" hidden></div>
+<div id="done" hidden role="dialog" aria-label="Ride stopped">
+  <h3>Ride stopped</h3>
+  <div class="stats">
+    <div><b id="d-km">0.0</b><span>km</span></div><div><b id="d-time">0:00</b><span>riding time</span></div>
+    <div><b id="d-pw">0</b><span>average watts</span></div><div><b id="d-up">0</b><span>metres climbed</span></div>
+  </div>
+  <div class="acts"><button id="resume">Keep riding</button><button id="again">New ride</button></div>
+  <div class="acts" style="margin-top:8px"><button id="tcx" title="Saves a .tcx file of this ride. Upload it at strava.com/upload/select, or to Garmin Connect, TrainingPeaks and others.">Download for Strava</button></div>
+</div>
 <div id="credit"></div>
 <div id="loading">Building the valley…</div>
 
@@ -1333,7 +1354,7 @@ addEventListener('resize', () => {
 
 /* ---------- input: keys, slider, smart trainer ---------- */
 const START = real ? 850 : 0;          // Leckhampton: begin on the lane about 150 m below where the hill steepens, not out in the vale
-const st = { s: START, v: 6, power: 220, target: 220, dist: 0, trainer: false };
+const st = { s: START, v: 6, power: 220, target: 220, dist: 0, trainer: false, stopped: false, time: 0, work: 0, climb: 0, track: [], sampled: -1 };
 window.ride = st; st.haze = hazeCol; st.built = st0;
 st.goNear = (x, z) => { let b = 0, bd = 1e12; for (let i = 0; i < N; i++) { const d = (P[i].x - x) ** 2 + (P[i].z - z) ** 2; if (d < bd) { bd = d; b = i; } } st.s = Math.max(0, b * LEN / N - 60); return Math.round(Math.sqrt(bd)); };   // for checking: ride to the road nearest a point
 st.weather = (n, i) => setWeather(n, i);
@@ -1356,6 +1377,72 @@ $('clean').addEventListener('click', e => { e.stopPropagation(); setClean(true);
 addEventListener('click', () => { if (isClean()) setClean(false); });
 addEventListener('keydown', e => { if ((e.key === 'h' || e.key === 'H') && !e.metaKey && !e.ctrlKey && !e.altKey) setClean(!isClean()); });
 $('skip').addEventListener('click', () => skip(250));
+// Stop ride: roll to a halt and show what you did. Keep riding carries on; New ride starts the numbers (and a new log entry) again.
+const clockTime = t => { t = Math.round(t); const h = Math.floor(t / 3600), m = Math.floor(t % 3600 / 60), s = String(t % 60).padStart(2, '0'); return h ? h + ':' + String(m).padStart(2, '0') + ':' + s : m + ':' + s; };
+const stopRide = () => {
+  if (st.stopped) return;
+  st.stopped = true; setMenu(false); if (isClean()) setClean(false);
+  $('d-km').textContent = (st.dist / 1000).toFixed(st.dist < 99950 ? 2 : 1); $('d-time').textContent = clockTime(st.time);
+  $('d-pw').textContent = st.time > 1 ? Math.round(st.work / st.time) : 0; $('d-up').textContent = Math.round(st.climb);
+  $('tcx').hidden = st.track.length < 2;
+  $('done').hidden = false; $('resume').focus();
+  if (st.saveRide) st.saveRide();
+};
+// The ride as a file Strava and others can read (TCX): a point a second with time, distance, height, speed and power.
+// A real course also gets its true position, so the ride draws on the map; the invented valley has none to give.
+// British National Grid easting/northing -> WGS84 latitude/longitude (Ordnance Survey's formulas; good to a few metres)
+const bngToLatLon = (E, N) => {
+  let a = 6377563.396, b = 6356256.909, e2 = 1 - b * b / (a * a);
+  const F0 = 0.9996012717, p0 = 49 * Math.PI / 180, l0 = -2 * Math.PI / 180, N0 = -100000, E0 = 400000, n = (a - b) / (a + b);
+  let p = p0, M = 0;
+  do {
+    p += (N - N0 - M) / (a * F0);
+    M = b * F0 * ((1 + n + 1.25 * n * n + 1.25 * n ** 3) * (p - p0) - (3 * n + 3 * n * n + 2.625 * n ** 3) * Math.sin(p - p0) * Math.cos(p + p0)
+      + (1.875 * n * n + 1.875 * n ** 3) * Math.sin(2 * (p - p0)) * Math.cos(2 * (p + p0)) - 35 / 24 * n ** 3 * Math.sin(3 * (p - p0)) * Math.cos(3 * (p + p0)));
+  } while (Math.abs(N - N0 - M) >= 1e-5);
+  const sp = Math.sin(p), nu = a * F0 / Math.sqrt(1 - e2 * sp * sp), rho = a * F0 * (1 - e2) / (1 - e2 * sp * sp) ** 1.5, eta2 = nu / rho - 1;
+  const t = Math.tan(p), t2 = t * t, sec = 1 / Math.cos(p), dE = E - E0;
+  const lat = p - t / (2 * rho * nu) * dE ** 2 + t / (24 * rho * nu ** 3) * (5 + 3 * t2 + eta2 - 9 * t2 * eta2) * dE ** 4 - t / (720 * rho * nu ** 5) * (61 + 90 * t2 + 45 * t2 * t2) * dE ** 6;
+  const lon = l0 + sec / nu * dE - sec / (6 * nu ** 3) * (nu / rho + 2 * t2) * dE ** 3 + sec / (120 * nu ** 5) * (5 + 28 * t2 + 24 * t2 * t2) * dE ** 5 - sec / (5040 * nu ** 7) * (61 + 662 * t2 + 1320 * t2 * t2 + 720 * t2 ** 3) * dE ** 7;
+  // to x, y, z on the Airy ellipsoid, shift and turn to WGS84 (Helmert), and back to latitude and longitude
+  const v = a / Math.sqrt(1 - e2 * Math.sin(lat) ** 2), x = v * Math.cos(lat) * Math.cos(lon), y = v * Math.cos(lat) * Math.sin(lon), z = (1 - e2) * v * Math.sin(lat);
+  const s = -20.4894e-6, as = Math.PI / 648000, rx = 0.1502 * as, ry = 0.247 * as, rz = 0.8421 * as;
+  const x2 = 446.448 + (1 + s) * x - rz * y + ry * z, y2 = -125.157 + rz * x + (1 + s) * y - rx * z, z2 = 542.06 - ry * x + rx * y + (1 + s) * z;
+  a = 6378137; b = 6356752.3142; e2 = 1 - b * b / (a * a);
+  const pr = Math.hypot(x2, y2); let phi = Math.atan2(z2, pr * (1 - e2));
+  for (let i = 0; i < 10; i++) { const w = a / Math.sqrt(1 - e2 * Math.sin(phi) ** 2); phi = Math.atan2(z2 + e2 * w * Math.sin(phi), pr); }
+  return [phi * 180 / Math.PI, Math.atan2(y2, x2) * 180 / Math.PI];
+};
+const rideFile = () => {
+  const iso = t => new Date(t).toISOString().replace(/\.\d+Z$/, 'Z'), pts = st.track, t0 = pts[0][0];
+  const body = pts.map(([t, x, y, z, d, v, w]) => {
+    let pos = '';
+    if (real && real.origin) { const [la, lo] = bngToLatLon(real.origin[0] + x, real.origin[1] - z); pos = `<Position><LatitudeDegrees>${la.toFixed(6)}</LatitudeDegrees><LongitudeDegrees>${lo.toFixed(6)}</LongitudeDegrees></Position>`; }
+    return `<Trackpoint><Time>${iso(t)}</Time>${pos}<AltitudeMeters>${y.toFixed(1)}</AltitudeMeters><DistanceMeters>${d.toFixed(1)}</DistanceMeters>`
+      + `<Extensions><ns3:TPX><ns3:Speed>${v.toFixed(2)}</ns3:Speed><ns3:Watts>${Math.round(w)}</ns3:Watts></ns3:TPX></Extensions></Trackpoint>`;
+  }).join('\n');
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<TrainingCenterDatabase xmlns="http://www.garmin.com/xmlschemas/TrainingCenterDatabase/v2" xmlns:ns3="http://www.garmin.com/xmlschemas/ActivityExtension/v2">
+<Activities><Activity Sport="Biking"><Id>${iso(t0)}</Id>
+<Lap StartTime="${iso(t0)}"><TotalTimeSeconds>${Math.round(st.time)}</TotalTimeSeconds><DistanceMeters>${st.dist.toFixed(1)}</DistanceMeters><Intensity>Active</Intensity><TriggerMethod>Manual</TriggerMethod>
+<Track>
+${body}
+</Track></Lap><Notes>Golden Hour Ride, ${real ? 'Leckhampton Hill' : 'the valley'}</Notes></Activity></Activities>
+</TrainingCenterDatabase>`;
+};
+st.rideFile = rideFile;                                    // for testing
+$('tcx').addEventListener('click', () => {
+  if (st.track.length < 2) return;
+  const d = new Date(st.track[0][0]), two = n => String(n).padStart(2, '0');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([rideFile()], { type: 'application/vnd.garmin.tcx+xml' }));
+  a.download = `golden-hour-ride-${d.getFullYear()}-${two(d.getMonth() + 1)}-${two(d.getDate())}-${two(d.getHours())}${two(d.getMinutes())}.tcx`;
+  a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+});
+const resumeRide = () => { st.stopped = false; $('done').hidden = true; if (st.v < 3) st.v = 3; };
+$('stop').addEventListener('click', stopRide);
+$('resume').addEventListener('click', resumeRide);
+$('again').addEventListener('click', () => { if (st.newRide) st.newRide(); st.dist = st.time = st.work = st.climb = 0; st.track = []; st.sampled = -1; resumeRide(); });
 // the menu: one button, the M key, and a click on the scenery closes it. The ride log shares its corner, so only one is open.
 const setMenu = open => {
   $('menu').hidden = !open; $('menubtn').classList.toggle('on', open); $('menubtn').textContent = open ? '✕' : '⋯'; $('menubtn').setAttribute('aria-expanded', open);
@@ -1683,12 +1770,14 @@ setHills(HILLS * 100);
   let last = performance.now(), ok = true;
   const save = () => {
     const now = performance.now();
-    if (!document.hidden) ride.s += Math.min(10, (now - last) / 1000);
+    if (!document.hidden && !st.stopped) ride.s += Math.min(10, (now - last) / 1000);
     last = now; ride.m = Math.round(st.dist);
     if (ride.m < MIN) return;
     const all = load().filter(r => r.t !== ride.t); all.push({ ...ride, s: Math.round(ride.s) });
     try { localStorage.setItem(KEY, JSON.stringify(all.slice(-300))); ok = true; } catch { ok = false; }
   };
+  st.saveRide = save;
+  st.newRide = () => { save(); ride.t = new Date().toISOString(); ride.s = 0; ride.m = 0; last = performance.now(); };   // the ride so far stays in the log; a new entry begins
   const km = m => (m / 1000).toFixed(m < 99950 ? 1 : 0), box = $('log'), btn = $('logbtn');
   const day = t => new Date(t).toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
   const mins = s => s < 3600 ? Math.round(s / 60) + ' min' : Math.floor(s / 3600) + ' h ' + Math.round(s % 3600 / 60) + ' min';
@@ -1734,6 +1823,8 @@ setHills(HILLS * 100);
     [/\b(overcast|cloud|clouds|cloudy|grey|gray)\b/, 'Overcast', () => setWeather('overcast')],
     [/\b(golden|sun|sunny|sunshine|sunset|clear|evening)\b/, 'Golden', () => setWeather('golden')],
     ...(LAB ? [[/\b(starry|stars|night|painting|van gogh)\b/, 'Starry', () => setWeather('starry')]] : []),
+    [/\b(stop|pause|finish)\b/, 'Stopped', () => stopRide()],
+    [/\b(keep riding|carry on|resume|continue|start)\b/, 'Riding', () => resumeRide()],
     [/\b(skip|forward|ahead)\b/, 'Skip ahead', () => skip(250)],
     [/\bback\b/, 'Skip back', () => skip(-250)],
     [/\b(hide|hidden)\b/, 'Info hidden', () => setClean(true)],
@@ -1798,7 +1889,14 @@ function tick() {
     scene_t += dt;
     if (scene_t >= SCENE_PLAN[scene_i][1]) { scene_t = 0; scene_i = (scene_i + 1) % SCENE_PLAN.length; setWeather(SCENE_PLAN[scene_i][0]); }
   }
-  st.s = (st.s + st.v * dt) % LEN; st.dist += st.v * dt;
+  if (st.stopped) st.v = Math.max(0, v - 5 * dt);          // roll to a halt; nothing counts while stopped
+  else {
+    st.dist += st.v * dt; st.time += dt; st.work += st.power * dt; if (pose.t.y > 0) st.climb += pose.t.y * st.v * dt;
+    if (st.time - st.sampled >= 1 && st.track.length < 43200) {          // one point a second for the ride file, up to twelve hours
+      st.sampled = st.time; st.track.push([Date.now(), pose.p.x, pose.p.y, pose.p.z, st.dist, st.v, st.power]);
+    }
+  }
+  st.s = (st.s + st.v * dt) % LEN;
   grade += (pose.t.y * 100 - grade) * Math.min(1, dt * 2);
 
   // camera: follow the lane, look down the road, lean into bends, rock with the pedals
