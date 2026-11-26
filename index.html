@@ -15,18 +15,27 @@
   #hud div { text-align: left; min-width: 70px; }
   #hud b { display: block; font-size: 30px; font-weight: 300; letter-spacing: -.01em; }
   #hud span { font-size: 10px; letter-spacing: .16em; text-transform: uppercase; opacity: .75; }
-  #ctl { position: fixed; top: 18px; right: 18px; left: 18px; display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: 10px 12px;
-    font-size: 11px; letter-spacing: .08em; text-shadow: 0 1px 8px rgba(0,0,0,.6); }
-  #ctl input { width: 150px; accent-color: #ffcf8f; }
-  #ctl button { font: inherit; color: #fff; background: rgba(20,16,12,.45); border: 1px solid rgba(255,255,255,.35);
-    border-radius: 999px; padding: 7px 13px; cursor: pointer; backdrop-filter: blur(6px); }
-  #ctl button:hover { background: rgba(20,16,12,.7); }
-  #ctl button.on { background: rgba(255,255,255,.3); border-color: #fff; }
-  #wx { display: flex; gap: 4px; }
-  #hills { display: flex; gap: 4px; align-items: center; }
-  #hills button { min-width: 30px; padding-left: 0; padding-right: 0; }
-  #hval { min-width: 74px; text-align: center; }
-  #log { position: fixed; top: 64px; right: 18px; width: 270px; max-height: 70vh; overflow: auto; padding: 14px 16px; border-radius: 14px;
+  /* top left: where you are. top right: trainer, voice and the menu. everything else lives in the menu. */
+  #place { position: fixed; top: 18px; left: 18px; }
+  #ctl { position: fixed; top: 18px; right: 18px; display: flex; align-items: center; gap: 8px; }
+  #place, #ctl, #menu { font-size: 11px; letter-spacing: .08em; text-shadow: 0 1px 8px rgba(0,0,0,.6); }
+  #place button, #ctl button, #menu button { font: inherit; color: #fff; background: rgba(20,16,12,.45); border: 1px solid rgba(255,255,255,.35);
+    border-radius: 999px; padding: 7px 13px; cursor: pointer; backdrop-filter: blur(6px); white-space: nowrap; }
+  #place button:hover, #ctl button:hover, #menu button:hover { background: rgba(20,16,12,.7); }
+  #place button.on, #ctl button.on, #menu button.on { background: rgba(255,255,255,.3); border-color: #fff; }
+  #bt.live::before { content: ''; display: inline-block; width: 7px; height: 7px; margin-right: 7px; border-radius: 50%; background: #6fd6ae; vertical-align: 1px; }
+  #menubtn { min-width: 38px; padding-left: 0; padding-right: 0; font-size: 14px; line-height: 13px; }
+  #menu { position: fixed; top: 62px; right: 18px; width: 268px; max-height: calc(100vh - 90px); overflow: auto; box-sizing: border-box; padding: 14px;
+    border-radius: 14px; background: rgba(20,16,12,.74); border: 1px solid rgba(255,255,255,.3); backdrop-filter: blur(8px);
+    display: flex; flex-direction: column; gap: 10px; }
+  #menu[hidden], #menu [hidden] { display: none !important; }
+  #menu .lab { font-size: 10px; letter-spacing: .14em; text-transform: uppercase; opacity: .7; margin-bottom: -4px; }
+  #menu .step { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  #menu .step button { min-width: 34px; padding-left: 0; padding-right: 0; }
+  #menu .step input { flex: 1; min-width: 0; accent-color: #ffcf8f; }
+  #menu .acts { display: flex; flex-wrap: wrap; gap: 6px; }
+  #wx { display: flex; flex-wrap: wrap; gap: 4px; }
+  #log { position: fixed; top: 62px; right: 18px; width: 270px; max-height: 70vh; overflow: auto; padding: 14px 16px; border-radius: 14px;
     background: rgba(20,16,12,.72); border: 1px solid rgba(255,255,255,.3); backdrop-filter: blur(8px); font-size: 13px; color: #fff; }
   #log h3 { margin: 0 0 8px; font-size: 11px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; opacity: .75; }
   #log .tot { display: flex; gap: 18px; margin-bottom: 12px; }
@@ -37,7 +46,7 @@
   #log td:last-child { text-align: right; }
   #log .muted { opacity: .65; }
   #log button { margin-top: 12px; font: inherit; font-size: 11px; color: #fff; background: none; border: 1px solid rgba(255,255,255,.35); border-radius: 999px; padding: 4px 10px; cursor: pointer; }
-  body.clean #hud, body.clean #ctl, body.clean #log, body.clean #credit { display: none; }
+  body.clean #hud, body.clean #ctl, body.clean #place, body.clean #menu, body.clean #log, body.clean #credit { display: none; }
   body.clean { cursor: none; }
   #credit { position: fixed; right: 14px; bottom: 10px; font-size: 10px; letter-spacing: .04em; opacity: .7; text-shadow: 0 1px 6px rgba(0,0,0,.7); max-width: 46vw; text-align: right; }
 </style>
@@ -57,19 +66,24 @@
   <div><b id="h-di">0.00</b><span>km</span></div>
   <div id="h-gear" hidden><b id="h-ge">6</b><span>gear</span></div>
 </div>
+<div id="place"><button id="course" title="Switch between the invented valley and the real Leckhampton Hill loop">Course</button></div>
 <div id="ctl">
-  <span>POWER</span>
-  <input id="pwr" type="range" min="0" max="600" step="5" value="220" aria-label="Power in watts">
-  <span>↑ ↓ keys</span>
-  <button id="skip" title="Jump 250 m up the road (→ key; ← goes back)">Skip 250 m ›</button>
-  <button id="voice" title="Say: rain, mist, overcast, sunny, skip, back, hide or show. For a smart trainer: gear up, gear down, a gear number such as “four” or “gear four”, easier, harder, flat, full">Voice: off</button>
-  <button id="course" title="Switch between the invented valley and the real Leckhampton Hill loop">Course</button>
-  <span id="wx"><button data-w="snow">Snow</button><button data-w="golden" class="on">Golden</button><button data-w="overcast">Overcast</button><button data-w="rain">Rain</button><button data-w="mist">Mist</button><button data-w="starry">Starry</button></span>
   <button id="bt">Connect trainer</button>
-  <span id="hills" title="How much of each hill a smart trainer makes you feel. Turn it down if the climbs are too hard; 0 % is flat."><button id="hless" aria-label="Make hills easier">−</button><span id="hval">Hills 50 %</span><button id="hmore" aria-label="Make hills harder">+</button></span>
-  <button id="obc" title="Connect Zwift Ride handlebars directly, or another controller through the BikeControl app. Shift: gears on a trainer, power without. Left and right: skip. Select and back: change the weather.">Connect controller</button>
-  <button id="clean" title="Hide everything on screen (H key, or say “hide”). Press H, click, or say “show” to bring it back">Hide info</button>
-  <button id="logbtn" title="Distance you have ridden, kept in this browser">Log</button>
+  <button id="voice" title="Say: rain, mist, overcast, sunny, skip, back, hide or show. For a smart trainer: gear up, gear down, a gear number such as “four” or “gear four”, easier, harder, flat, full">Voice: off</button>
+  <button id="menubtn" aria-label="Menu" aria-expanded="false" title="Weather, gears, hills and more (M key)">⋯</button>
+</div>
+<div id="menu" hidden>
+  <div class="lab">Weather</div>
+  <span id="wx"><button data-w="snow">Snow</button><button data-w="golden" class="on">Golden</button><button data-w="overcast">Overcast</button><button data-w="rain">Rain</button><button data-w="mist">Mist</button><button data-w="starry">Starry</button></span>
+  <div class="step" id="gearrow" hidden title="Virtual gear for a smart trainer. Also the . and , keys, or say “gear up”, “gear down” or “gear four”."><button id="gless" aria-label="Gear down">−</button><span id="gval">Gear 6</span><button id="gmore" aria-label="Gear up">+</button></div>
+  <div class="step" id="hills" title="How much of each hill a smart trainer makes you feel. Turn it down if the climbs are too hard; 0 % is flat."><button id="hless" aria-label="Make hills easier">−</button><span id="hval">Hills 50 %</span><button id="hmore" aria-label="Make hills harder">+</button></div>
+  <div class="step" id="pwrrow" title="Your power when no trainer is connected. Also the ↑ and ↓ keys."><span>Power</span><input id="pwr" type="range" min="0" max="600" step="5" value="220" aria-label="Power in watts"></div>
+  <div class="acts">
+    <button id="skip" title="Jump 250 m up the road (→ key; ← goes back)">Skip 250 m ›</button>
+    <button id="logbtn" title="Distance you have ridden, kept in this browser">Ride log</button>
+    <button id="clean" title="Hide everything on screen (H key, or say “hide”). Press H, click, or say “show” to bring it back">Hide everything</button>
+    <button id="obc" title="Connect Zwift Ride handlebars directly, or another controller through the BikeControl app. Shift: gears on a trainer, power without. Left and right: skip. Select and back: change the weather.">Connect controller</button>
+  </div>
 </div>
 <div id="log" hidden></div>
 <div id="credit"></div>
@@ -1342,6 +1356,15 @@ $('clean').addEventListener('click', e => { e.stopPropagation(); setClean(true);
 addEventListener('click', () => { if (isClean()) setClean(false); });
 addEventListener('keydown', e => { if ((e.key === 'h' || e.key === 'H') && !e.metaKey && !e.ctrlKey && !e.altKey) setClean(!isClean()); });
 $('skip').addEventListener('click', () => skip(250));
+// the menu: one button, the M key, and a click on the scenery closes it. The ride log shares its corner, so only one is open.
+const setMenu = open => {
+  $('menu').hidden = !open; $('menubtn').classList.toggle('on', open); $('menubtn').textContent = open ? '✕' : '⋯'; $('menubtn').setAttribute('aria-expanded', open);
+  if (open && !$('log').hidden) $('logbtn').click();
+};
+$('menubtn').addEventListener('click', () => setMenu($('menu').hidden));
+$('c').addEventListener('click', () => { setMenu(false); if (!$('log').hidden) $('logbtn').click(); });
+addEventListener('keydown', e => { if ((e.key === 'm' || e.key === 'M') && !e.metaKey && !e.ctrlKey && !e.altKey) setMenu($('menu').hidden); });
+$('logbtn').addEventListener('click', () => setTimeout(() => { if (!$('log').hidden) setMenu(false); }, 0));   // after the log has opened
 /* Smart trainer. Power is read from the Cycling Power service. If the trainer also has the Fitness Machine
    Service (FTMS), the game takes control of it and sends the road gradient, so climbs feel harder on the bike.
    Without FTMS, or if the trainer refuses control, it stays power only. */
@@ -1371,7 +1394,7 @@ let GEAR = GEAR_MID;
 st.bike = bike; st.sendGrade = () => sendGrade();   // for testing without a trainer
 const setGear = n => {
   GEAR = Math.max(1, Math.min(GEARS, Math.round(n)));
-  $('h-ge').textContent = GEAR;
+  $('h-ge').textContent = GEAR; $('gval').textContent = 'Gear ' + GEAR;
   bike.at = 0;                                      // tell the trainer straight away
   return 'Gear ' + GEAR;
 };
@@ -1379,9 +1402,12 @@ const TRAINER_KEY = 'golden-hour-ride-trainer';     // the last trainer used: { 
 const lastTrainer = () => { try { return JSON.parse(localStorage.getItem(TRAINER_KEY)) || null; } catch { return null; } };
 const btLabel = () => {
   const last = lastTrainer();
+  $('bt').classList.toggle('live', !!bike.dev);
   $('bt').textContent = bike.dev ? (bike.point ? 'Trainer: power and gradient' : 'Trainer: power only')
     : bike.known || (last && navigator.bluetooth && navigator.bluetooth.getDevices) ? 'Reconnect trainer' : 'Connect trainer';
 };
+$('gless').addEventListener('click', () => setGear(GEAR - 1));
+$('gmore').addEventListener('click', () => setGear(GEAR + 1));
 $('hless').addEventListener('click', () => setHills(HILLS * 100 - 10));
 $('hmore').addEventListener('click', () => setHills(HILLS * 100 + 10));
 
@@ -1516,6 +1542,7 @@ setHills(HILLS * 100);
     Z_TX = '00000004-19ca-4651-86e5-fa29dcdd09d1';
   const btn = $('obc'), pad = { dev: null, haptic: null, down: new Set(), rx: null, held: 0 };
   const label = t => { btn.textContent = t; btn.classList.toggle('on', !!pad.dev); };
+  btn.hidden = !new URLSearchParams(location.search).has('controller');   // off the top bar unless the address ends ?controller
   const weather = step => {
     const all = [...document.querySelectorAll('#wx button')], i = all.findIndex(b => b.classList.contains('on'));
     const next = all[(Math.max(0, i) + step + all.length) % all.length]; setWeather(next.dataset.w); return next.textContent;
@@ -1824,7 +1851,8 @@ function tick() {
     $('h-sp').textContent = (st.v * 3.6).toFixed(1);
     $('h-gr').textContent = (grade >= 0 ? '+' : '') + grade.toFixed(1);
     $('h-di').textContent = (st.dist / 1000).toFixed(2);
-    $('h-gear').hidden = !bike.point;                       // gears only mean something while a trainer is taking the gradient
+    $('h-gear').hidden = $('gearrow').hidden = !bike.point; // gears only mean something while a trainer is taking the gradient
+    $('pwrrow').hidden = !!bike.dev;                        // and the power slider only while there is no trainer to read
   }
 
   composer.render();
