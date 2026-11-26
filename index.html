@@ -62,7 +62,7 @@
   <input id="pwr" type="range" min="0" max="600" step="5" value="220" aria-label="Power in watts">
   <span>↑ ↓ keys</span>
   <button id="skip" title="Jump 250 m up the road (→ key; ← goes back)">Skip 250 m ›</button>
-  <button id="voice" title="Say: rain, mist, overcast, sunny, skip, back, hide or show. For a smart trainer: gear up, gear down, easier, harder, flat, full">Voice: off</button>
+  <button id="voice" title="Say: rain, mist, overcast, sunny, skip, back, hide or show. For a smart trainer: gear up, gear down, a gear number such as “four” or “gear four”, easier, harder, flat, full">Voice: off</button>
   <button id="course" title="Switch between the invented valley and the real Leckhampton Hill loop">Course</button>
   <span id="wx"><button data-w="snow">Snow</button><button data-w="golden" class="on">Golden</button><button data-w="overcast">Overcast</button><button data-w="rain">Rain</button><button data-w="mist">Mist</button><button data-w="starry">Starry</button></span>
   <button id="bt">Connect trainer</button>
@@ -1685,7 +1685,16 @@ setHills(HILLS * 100);
 /* ---------- voice: change the weather, or skip, by speaking ---------- */
 {
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition, btn = $('voice');
+  // a gear by number: "gear four", "gear 4", "fourth gear", or just "four" or "4" said alone
+  const NUM = { one: 1, two: 2, to: 2, too: 2, three: 3, four: 4, for: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10, eleven: 11, twelve: 12,
+    first: 1, second: 2, third: 3, fourth: 4, fifth: 5, sixth: 6, seventh: 7, eighth: 8, ninth: 9, tenth: 10, eleventh: 11, twelfth: 12 };
+  const GEAR_SAID = new RegExp('\\bgear (?:number )?(\\d{1,2}|one|two|to|too|three|four|for|five|six|seven|eight|nine|ten|eleven|twelve)\\b'
+    + '|\\b(\\d{1,2}(?:st|nd|rd|th)|first|second|third|fourth|fifth|sixth|seventh|eighth|ninth|tenth|eleventh|twelfth) gear\\b'
+    + '|^\\s*(\\d{1,2}|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve)[.!]?\\s*$');
+  const gearSaid = m => { const w = m[1] || m[2] || m[3], n = NUM[w] || parseInt(w, 10); if (n >= 1 && n <= GEARS) setGear(n); };
+  st.say = heard => { const hit = WORDS.find(w => w[0].test(heard)); if (hit) hit[2](heard.match(hit[0])); return hit ? (typeof hit[1] === 'function' ? hit[1]() : hit[1]) : null; };   // for testing without a microphone
   const WORDS = [                      // the first match in what was heard wins
+    [GEAR_SAID, () => 'Gear ' + GEAR, gearSaid],
     [/\b(gear down|shift down|change down|lower gear|down a gear)\b/, () => 'Gear ' + GEAR, () => setGear(GEAR - 1)],
     [/\b(gear up|shift up|change up|higher gear|up a gear)\b/, () => 'Gear ' + GEAR, () => setGear(GEAR + 1)],
     [/\b(easier|easy|lighter|less|ease)\b/, () => $('hval').textContent, () => setHills(HILLS * 100 - 20)],
@@ -1711,7 +1720,7 @@ setHills(HILLS * 100);
     rec.onresult = e => {
       for (let i = e.resultIndex; i < e.results.length; i++) {
         const heard = e.results[i][0].transcript.toLowerCase(), hit = WORDS.find(w => w[0].test(heard));
-        if (hit && performance.now() - last > 2500) { last = performance.now(); hit[2](); label('Voice: ' + (typeof hit[1] === 'function' ? hit[1]() : hit[1])); }
+        if (hit && performance.now() - last > 2500) { last = performance.now(); hit[2](heard.match(hit[0])); label('Voice: ' + (typeof hit[1] === 'function' ? hit[1]() : hit[1])); }
       }
     };
     rec.onend = () => { if (on) { try { rec.start(); } catch (err) {} } };          // the browser stops listening after a silence, so start again
