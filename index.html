@@ -17,6 +17,8 @@
   #hud span { font-size: 10px; letter-spacing: .16em; text-transform: uppercase; opacity: .75; }
   /* top left: where you are. top right: trainer, voice and the menu. everything else lives in the menu. */
   #place { position: fixed; top: 18px; left: 18px; }
+  #places { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; margin-top: 8px; }
+  #places[hidden] { display: none; }
   #ctl { position: fixed; top: 18px; right: 18px; display: flex; align-items: center; gap: 8px; }
   #place, #ctl, #menu { font-size: 11px; letter-spacing: .08em; text-shadow: 0 1px 8px rgba(0,0,0,.6); }
   #place button, #ctl button, #menu button { font: inherit; color: #fff; background: rgba(20,16,12,.45); border: 1px solid rgba(255,255,255,.35);
@@ -80,7 +82,9 @@
   <div><b id="h-di">0.00</b><span>km</span></div>
   <div id="h-gear" hidden><b id="h-ge">6</b><span>gear</span></div>
 </div>
-<div id="place"><button id="course" title="Switch between the invented valley and the real Leckhampton Hill loop">Course</button></div>
+<div id="place"><button id="course" title="Choose where to ride. Changing place reloads the ride." aria-expanded="false">Course</button>
+  <div id="places" hidden><button data-q="">Alps</button><button data-q="?theme=christmas">Alps in snow</button><button data-q="?course=leckhampton">Leckhampton Hill</button></div>
+</div>
 <div id="ctl">
   <button id="bt">Connect trainer</button>
   <button id="voice" title="Say: rain, mist, overcast, sunny, skip, back, stop, carry on, hide or show. For a smart trainer: gear up, gear down, a gear number such as “four” or “gear four”, easier, harder, flat, full">Voice: off</button>
@@ -88,7 +92,7 @@
 </div>
 <div id="menu" hidden>
   <div class="lab">Weather</div>
-  <span id="wx"><button data-w="snow">Snow</button><button data-w="golden" class="on">Golden</button><button data-w="overcast">Overcast</button><button data-w="rain">Rain</button><button data-w="mist">Mist</button><button data-w="starry">Starry</button></span>
+  <span id="wx"><button data-w="snow">Snow</button><button data-w="golden" class="on">Golden</button><button data-w="overcast">Overcast</button><button data-w="rain">Rain</button><button data-w="mist">Mist</button></span>
   <div class="step" id="gearrow" hidden title="Virtual gear for a smart trainer. Also the . and , keys, or say “gear up”, “gear down” or “gear four”."><button id="gless" aria-label="Gear down">−</button><span id="gval">Gear 6</span><button id="gmore" aria-label="Gear up">+</button></div>
   <div class="step" id="hills" title="How much of each hill a smart trainer makes you feel. Turn it down if the climbs are too hard; 0 % is flat."><button id="hless" aria-label="Make hills easier">−</button><span id="hval">Hills 50 %</span><button id="hmore" aria-label="Make hills harder">+</button></div>
   <div class="step" id="pwrrow" title="Your power when no trainer is connected. Also the ↑ and ↓ keys."><span>Power</span><input id="pwr" type="range" min="0" max="600" step="5" value="220" aria-label="Power in watts"></div>
@@ -257,8 +261,15 @@ if (COURSE !== 'valley') {
   real.h = Float32Array.from(q, v => real.demMin + v / 65535 * (real.demMax - real.demMin));     // surveyed ground heights, metres
   $('credit').textContent = real.credit + ' ' + real.osm.credit;
 }
-$('course').textContent = real ? 'Course: Leckhampton' : 'Course: Valley';
-$('course').addEventListener('click', () => { location.search = real ? '' : '?course=leckhampton'; });
+// where to ride: the Alps valley, the same valley under snow, or the real Leckhampton Hill. Each is built when the page loads, so choosing reloads.
+{
+  const here = real ? '?course=leckhampton' : XMAS ? '?theme=christmas' : '', list = $('places');
+  for (const b of list.children) {
+    if (b.dataset.q === here) { b.classList.add('on'); $('course').textContent = b.textContent + ' ▾'; }
+    b.addEventListener('click', () => { if (b.dataset.q === here) list.hidden = true; else location.search = b.dataset.q; });
+  }
+  $('course').addEventListener('click', () => { list.hidden = !list.hidden; $('course').setAttribute('aria-expanded', !list.hidden); });
+}
 function demH(x, z) {                 // the real ground under a point
   const g = real.cells, w = g + 1, f = v => Math.min(g - 1e-6, Math.max(0, (v + real.size / 2) / (real.size / g)));
   const fx = f(x), fz = f(z), ix = Math.floor(fx), iz = Math.floor(fz), u = fx - ix, v = fz - iz, h = real.h;
@@ -1186,8 +1197,6 @@ const WEATHER = {
               cloud: 1, cLit: grey(0.56, 0.6, 0.66), cDark: grey(0.3, 0.33, 0.39), mote: 0, rays: 0, rain: 1, rough: 0.32, tint: 0.55, ground: 0.72, paint: 0, expo: 0.5 },
   mist:     { sun: 5,   sunCol: [1, 0.8, 0.6], hemi: 2.6, fog: 0.0075, fogCol: hz.map(v => v * 0.95), dome: 0.6, domeH: hz, domeZ: hz.map(v => v * 0.8),
               cloud: 0.3, cLit: warmLit, cDark: warmDark, mote: 1, rays: 1.8, rain: 0, rough: 0.7, tint: 0.85, ground: 0.95, paint: 0, expo: 0.33 },
-  starry:   { sun: 5, sunCol: [1, 0.93, 0.74], hemi: 3.2, fog: 0.0005, fogCol: grey(0.16, 0.26, 0.52), dome: 1, domeH: grey(0.16, 0.26, 0.52), domeZ: grey(0.05, 0.1, 0.4),
-              cloud: 0, cLit: warmLit, cDark: warmDark, mote: 5, rays: 0, rain: 0, rough: 0.95, tint: 1, ground: 1, paint: 1, expo: 0.5 }
 };
 // Christmas dusk: the last low sun, a blue sky closing in, light snow falling.
 WEATHER.snow = { sun: 5, sunCol: [1, 0.64, 0.46], hemi: 2.5, fog: 0.0015, fogCol: [hz[0] * 0.8, hz[1] * 0.86, hz[2] * 1.05], dome: 0.4, domeH: hz, domeZ: grey(0.26, 0.33, 0.62),
@@ -1230,11 +1239,8 @@ function stepWeather(dt) {
   renderer.toneMappingExposure = wx.expo;
 }
 document.querySelectorAll('#wx button').forEach(b => b.addEventListener('click', () => setWeather(b.dataset.w)));
-// Starry is still being worked on: it only appears on the local copy, not the hosted site.
-const LAB = /^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname) || location.protocol === 'file:';
-if (!LAB) document.querySelector('#wx [data-w="starry"]')?.remove();
 if (!XMAS) document.querySelector('#wx [data-w="snow"]')?.remove(); else setWeather('snow', true);
-addEventListener('keydown', e => { const n = ['golden', 'overcast', 'rain', 'mist', LAB && 'starry'][+e.key - 1]; if (n) setWeather(n); });
+addEventListener('keydown', e => { const n = ['golden', 'overcast', 'rain', 'mist'][+e.key - 1]; if (n) setWeather(n); });
 
 /* ---------- cockpit ---------- */
 const rig = new THREE.Group();
@@ -1452,7 +1458,7 @@ const setMenu = open => {
   if (open && !$('log').hidden) $('logbtn').click();
 };
 $('menubtn').addEventListener('click', () => setMenu($('menu').hidden));
-$('c').addEventListener('click', () => { setMenu(false); if (!$('log').hidden) $('logbtn').click(); });
+$('c').addEventListener('click', () => { setMenu(false); $('places').hidden = true; if (!$('log').hidden) $('logbtn').click(); });
 addEventListener('keydown', e => { if ((e.key === 'm' || e.key === 'M') && !e.metaKey && !e.ctrlKey && !e.altKey) setMenu($('menu').hidden); });
 $('logbtn').addEventListener('click', () => setTimeout(() => { if (!$('log').hidden) setMenu(false); }, 0));   // after the log has opened
 /* Smart trainer. Power is read from the Cycling Power service. If the trainer also has the Fitness Machine
@@ -1825,7 +1831,6 @@ setHills(HILLS * 100);
     [/\b(mist|misty|fog|foggy)\b/, 'Mist', () => setWeather('mist')],
     [/\b(overcast|cloud|clouds|cloudy|grey|gray)\b/, 'Overcast', () => setWeather('overcast')],
     [/\b(golden|sun|sunny|sunshine|sunset|clear|evening)\b/, 'Golden', () => setWeather('golden')],
-    ...(LAB ? [[/\b(starry|stars|night|painting|van gogh)\b/, 'Starry', () => setWeather('starry')]] : []),
     [/\b(stop|pause|finish)\b/, 'Stopped', () => stopRide()],
     [/\b(keep riding|carry on|resume|continue|start)\b/, 'Riding', () => resumeRide()],
     [/\b(skip|forward|ahead)\b/, 'Skip ahead', () => skip(250)],
