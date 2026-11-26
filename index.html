@@ -34,6 +34,9 @@
   #menu .step button { min-width: 34px; padding-left: 0; padding-right: 0; }
   #menu .step input { flex: 1; min-width: 0; accent-color: #ffcf8f; }
   #menu .acts { display: flex; flex-wrap: wrap; gap: 6px; }
+  #menu .foot { display: flex; justify-content: flex-end; padding-top: 10px; border-top: 1px solid rgba(255,255,255,.16); }
+  #menu #stop { background: #ffcf8f; border-color: #ffcf8f; color: #2a1b0a; font-weight: 600; text-shadow: none; padding: 8px 16px; }
+  #menu #stop:hover { background: #ffdcae; }
   #wx { display: flex; flex-wrap: wrap; gap: 4px; }
   #done { position: fixed; left: 50%; top: 46%; transform: translate(-50%, -50%); width: min(360px, calc(100vw - 36px)); box-sizing: border-box; padding: 22px 24px;
     border-radius: 18px; background: rgba(20,16,12,.8); border: 1px solid rgba(255,255,255,.3); backdrop-filter: blur(10px); color: #fff; text-align: center; }
@@ -90,12 +93,12 @@
   <div class="step" id="hills" title="How much of each hill a smart trainer makes you feel. Turn it down if the climbs are too hard; 0 % is flat."><button id="hless" aria-label="Make hills easier">−</button><span id="hval">Hills 50 %</span><button id="hmore" aria-label="Make hills harder">+</button></div>
   <div class="step" id="pwrrow" title="Your power when no trainer is connected. Also the ↑ and ↓ keys."><span>Power</span><input id="pwr" type="range" min="0" max="600" step="5" value="220" aria-label="Power in watts"></div>
   <div class="acts">
-    <button id="stop" title="Stop and see your ride. You can carry on afterwards. Also by voice: “stop”.">Stop ride</button>
     <button id="skip" title="Jump 250 m up the road (→ key; ← goes back)">Skip 250 m ›</button>
     <button id="logbtn" title="Distance you have ridden, kept in this browser">Ride log</button>
     <button id="clean" title="Hide everything on screen (H key, or say “hide”). Press H, click, or say “show” to bring it back">Hide everything</button>
     <button id="obc" title="Connect Zwift Ride handlebars directly, or another controller through the BikeControl app. Shift: gears on a trainer, power without. Left and right: skip. Select and back: change the weather.">Connect controller</button>
   </div>
+  <div class="foot"><button id="stop" title="Stop and see your ride. You can carry on afterwards. Also by voice: “stop”.">Stop ride</button></div>
 </div>
 <div id="log" hidden></div>
 <div id="done" hidden role="dialog" aria-label="Ride stopped">
