@@ -66,6 +66,7 @@
   <span id="wx"><button data-w="snow">Snow</button><button data-w="golden" class="on">Golden</button><button data-w="overcast">Overcast</button><button data-w="rain">Rain</button><button data-w="mist">Mist</button><button data-w="starry">Starry</button></span>
   <button id="bt">Connect trainer</button>
   <span id="hills" title="How much of each hill a smart trainer makes you feel. Turn it down if the climbs are too hard; 0 % is flat."><button id="hless" aria-label="Make hills easier">−</button><span id="hval">Hills 50 %</span><button id="hmore" aria-label="Make hills harder">+</button></span>
+  <button id="obc" title="Connect a handlebar controller (Zwift Click, Play or Ride and others) through the BikeControl app. Shift: hills on a trainer, power without. Left and right: skip. Select and back: change the weather.">Connect controller</button>
   <button id="clean" title="Hide everything on screen (H key, or say “hide”). Press H, click, or say “show” to bring it back">Hide info</button>
   <button id="logbtn" title="Distance you have ridden, kept in this browser">Log</button>
 </div>
@@ -1486,6 +1487,64 @@ $('bt').addEventListener('click', async () => {
 });
 btLabel();
 setHills(HILLS * 100);
+
+/* ---------- handlebar controller, over the open OpenBikeControl protocol (Bluetooth) ----------
+   The BikeControl app (or any OpenBikeControl device) turns a Zwift Click, Play or Ride and others into simple
+   button messages: [0x01, button, state, button, state, ...]. We act when a button goes down. */
+{
+  const SVC = 'd273f680-d548-419d-b9d1-fa0472345229', BUTTONS = 'd273f681-d548-419d-b9d1-fa0472345229',
+    HAPTIC = 'd273f682-d548-419d-b9d1-fa0472345229', APPINFO = 'd273f683-d548-419d-b9d1-fa0472345229';
+  const btn = $('obc'), pad = { dev: null, haptic: null, down: new Set() };
+  const label = t => { btn.textContent = t; btn.classList.toggle('on', !!pad.dev); };
+  const weather = step => {
+    const all = [...document.querySelectorAll('#wx button')], i = all.findIndex(b => b.classList.contains('on'));
+    const next = all[(Math.max(0, i) + step + all.length) % all.length]; setWeather(next.dataset.w); return next.textContent;
+  };
+  const shift = up => {                                   // on a smart trainer a shift changes how much hill you feel; without one, the power
+    if (bike.dev) { setHills(HILLS * 100 + (up ? 10 : -10)); return $('hval').textContent; }
+    setTarget(st.target + (up ? 10 : -10)); return st.target + ' W';
+  };
+  const power = d => { setTarget(st.target + d); return st.target + ' W'; };
+  const ACT = {
+    0x01: () => shift(true), 0x02: () => shift(false),                                  // shift up, shift down
+    0x10: () => power(10), 0x11: () => power(-10),                                      // up, down
+    0x12: () => (skip(-250), 'Skip back'), 0x13: () => (skip(250), 'Skip ahead'),       // left, right
+    0x18: () => (skip(-250), 'Skip back'), 0x19: () => (skip(250), 'Skip ahead'),       // steer left, steer right
+    0x14: () => weather(1), 0x15: () => weather(-1),                                    // select, back
+    0x16: () => (setClean(!isClean()), isClean() ? 'Info hidden' : 'Info shown') };     // menu
+  const onButtons = d => {
+    if (d.byteLength < 3 || d.getUint8(0) !== 0x01) return;
+    for (let i = 1; i + 1 < d.byteLength; i += 2) {
+      const id = d.getUint8(i), state = d.getUint8(i + 1);
+      if (state !== 0x01) { if (state === 0x00) pad.down.delete(id); continue; }      // released, or an analogue value we do not use
+      if (pad.down.has(id)) continue; pad.down.add(id);
+      if (!ACT[id]) continue;
+      label('Controller: ' + ACT[id]());
+      if (pad.haptic) pad.haptic.writeValueWithoutResponse(new Uint8Array([0x03, 0x01, 0x00, 0x00])).catch(() => {});   // one short buzz
+    }
+  };
+  st.pad = bytes => onButtons(new DataView(new Uint8Array(bytes).buffer));               // for testing without a controller
+  btn.addEventListener('click', async () => {
+    if (!navigator.bluetooth) { label('Needs Chrome or Edge'); return; }
+    if (pad.dev) { try { pad.dev.gatt.disconnect(); } catch {} return; }
+    try {
+      const dev = await navigator.bluetooth.requestDevice({ filters: [{ services: [SVC] }] });
+      label('Connecting…');
+      const svc = await (await dev.gatt.connect()).getPrimaryService(SVC), ch = await svc.getCharacteristic(BUTTONS);
+      ch.addEventListener('characteristicvaluechanged', e => onButtons(e.target.value));
+      await ch.startNotifications();
+      pad.dev = dev; pad.down.clear();
+      dev.addEventListener('gattserverdisconnected', () => { pad.dev = pad.haptic = null; label('Connect controller'); }, { once: true });
+      try { pad.haptic = await svc.getCharacteristic(HAPTIC); } catch { pad.haptic = null; }
+      try {                                              // tell the controller who we are and which buttons we use
+        const txt = t => [t.length, ...new TextEncoder().encode(t)], ids = Object.keys(ACT).map(Number);
+        const info = await svc.getCharacteristic(APPINFO);
+        await info.writeValueWithoutResponse(new Uint8Array([0x04, 0x01, ...txt('golden-hour-ride'), ...txt('1.0'), ids.length, ...ids]));
+      } catch {}
+      label('Controller: ready');
+    } catch (err) { if (!pad.dev) label(err && err.name === 'NotFoundError' ? 'Connect controller' : 'Controller: failed'); }
+  });
+}
 
 /* ---------- ride log: distance ridden, kept in this browser (localStorage) ---------- */
 {
