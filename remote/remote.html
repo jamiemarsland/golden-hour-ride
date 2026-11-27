@@ -11,7 +11,7 @@
     padding: max(14px, env(safe-area-inset-top)) max(14px, env(safe-area-inset-right)) max(14px, env(safe-area-inset-bottom)) max(14px, env(safe-area-inset-left)); }
   #now { text-align: center; } #now b { display: block; font-size: 54px; font-weight: 300; line-height: 1; font-variant-numeric: tabular-nums; }
   #now span { font-size: 11px; letter-spacing: .16em; text-transform: uppercase; opacity: .65; }
-  .small button { display: flex; flex-direction: column; align-items: center; gap: 4px; } .small small { font-size: 11px; opacity: .7; min-height: 14px; }
+  .small button { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; } .small small { font-size: 11px; opacity: .7; } .small small:empty { display: none; }
   .small button.live { border-color: #ffcf8f; }
   body { -webkit-touch-callout: none; }
   #sheet { position: fixed; inset: 0; background: rgba(0,0,0,.55); display: flex; align-items: flex-end; }
@@ -45,7 +45,7 @@
   <div class="small">
     <button data-a="weather">Weather<small id="s-weather"></small></button>
     <button data-a="pacer" id="b-pacer">Pacer<small id="s-pacer">off</small></button>
-    <button data-a="stop" id="stop"><span id="s-stop">Stop</span><small></small></button>
+    <button data-a="stop" id="stop"><span id="s-stop">Stop</span></button>
   </div>
   <div id="hint">Hold Weather or Pacer for more</div>
 </main>
