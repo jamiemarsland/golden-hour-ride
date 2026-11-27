@@ -25,9 +25,20 @@
     border-radius: 999px; padding: 7px 13px; cursor: pointer; backdrop-filter: blur(6px); white-space: nowrap; }
   #place button:hover, #ctl button:hover, #menu button:hover { background: rgba(20,16,12,.7); }
   #place button.on, #ctl button.on, #menu button.on { background: rgba(255,255,255,.3); border-color: #fff; }
-  #bt.live::before { content: ''; display: inline-block; width: 7px; height: 7px; margin-right: 7px; border-radius: 50%; background: #6fd6ae; vertical-align: 1px; }
-  #heard { padding: 7px 13px 7px 11px; border-radius: 999px; background: rgba(20,16,12,.45); border: 1px solid rgba(255,207,143,.7); backdrop-filter: blur(6px); white-space: nowrap; }
-  #heard::before { content: ''; display: inline-block; width: 7px; height: 7px; margin-right: 7px; border-radius: 50%; background: #ffcf8f; vertical-align: 1px; }
+  /* Devices: how you are connected. One chip with a dot per device, opening a panel with a line and a button for each. */
+  .dd { display: inline-block; box-sizing: border-box; width: 7px; height: 7px; margin-right: 5px; border-radius: 50%; border: 1px solid rgba(255,255,255,.6); vertical-align: 1px; }
+  .dd.ok { background: #6fd6ae; border-color: #6fd6ae; } .dd.warn { background: #ffb347; border-color: #ffb347; }
+  #devlabel { margin-left: 3px; }
+  #devices { position: fixed; top: 62px; right: 18px; width: 300px; max-width: calc(100vw - 36px); box-sizing: border-box; padding: 4px 16px; border-radius: 14px;
+    background: rgba(20,16,12,.8); border: 1px solid rgba(255,255,255,.3); backdrop-filter: blur(8px); color: #fff; font-size: 13px; }
+  #devices[hidden] { display: none; }
+  #devices .dev { display: flex; align-items: center; gap: 12px; padding: 12px 0; }
+  #devices .dev + .dev { border-top: 1px solid rgba(255,255,255,.16); }
+  #devices .t { flex: 1; min-width: 0; } #devices .t b { display: block; font-weight: 600; } #devices .t span { font-size: 12px; opacity: .78; }
+  #devices button { font: inherit; font-size: 11px; letter-spacing: .06em; color: #fff; background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.4); border-radius: 999px; padding: 6px 12px; cursor: pointer; white-space: nowrap; }
+  #devices button:hover { background: rgba(255,255,255,.25); }
+  #toast { position: fixed; left: 50%; top: 22px; transform: translateX(-50%); padding: 8px 16px; border-radius: 999px; background: rgba(20,16,12,.8); border: 1px solid #ffcf8f;
+    color: #fff; font-size: 13px; letter-spacing: .04em; pointer-events: none; opacity: 0; transition: opacity .25s; white-space: nowrap; }
   #menubtn { min-width: 38px; padding-left: 0; padding-right: 0; font-size: 14px; line-height: 13px; }
   #menu { position: fixed; top: 62px; right: 18px; width: 268px; max-height: calc(100vh - 90px); overflow: auto; box-sizing: border-box; padding: 14px;
     border-radius: 14px; background: rgba(20,16,12,.74); border: 1px solid rgba(255,255,255,.3); backdrop-filter: blur(8px);
@@ -78,7 +89,7 @@
   #log td:last-child { text-align: right; }
   #log .muted { opacity: .65; }
   #log button { margin-top: 12px; font: inherit; font-size: 11px; color: #fff; background: none; border: 1px solid rgba(255,255,255,.35); border-radius: 999px; padding: 4px 10px; cursor: pointer; }
-  body.clean #hud, body.clean #ctl, body.clean #place, body.clean #menu, body.clean #help, body.clean #log, body.clean #credit { display: none; }
+  body.clean #hud, body.clean #ctl, body.clean #place, body.clean #menu, body.clean #devices, body.clean #toast, body.clean #help, body.clean #log, body.clean #credit { display: none; }
   body.clean { cursor: none; }
   #credit { position: fixed; right: 14px; bottom: 10px; font-size: 10px; letter-spacing: .04em; opacity: .7; text-shadow: 0 1px 6px rgba(0,0,0,.7); max-width: 46vw; text-align: right; }
 </style>
@@ -103,8 +114,7 @@
   <div id="places" hidden><button data-p="alps">Alps</button><button data-p="leckhampton">Leckhampton Hill</button></div>
 </div>
 <div id="ctl">
-  <button id="bt">Connect trainer</button>
-  <span id="heard" hidden title="Voice is listening. This shows the last thing it acted on."></span>
+  <button id="devbtn" aria-expanded="false" title="Connect your bike, and turn on voice control"><span class="dd" id="dd-trainer"></span><span class="dd" id="dd-voice"></span><span id="devlabel">Connect bike</span></button>
   <button id="menubtn" aria-label="Menu" aria-expanded="false" title="Weather, gears, hills and more (M key)">⋯</button>
 </div>
 <div id="menu" hidden>
@@ -118,8 +128,6 @@
   <div class="lab">Pacer</div>
   <div class="step" title="A computer rider who holds this many watts on your road, obeying the same hills you do. The number at the bottom is the gap: minus when they are ahead of you, plus when you are ahead."><button id="pless" aria-label="Pacer easier">−</button><button id="pacer">Pacer: off</button><button id="pmore" aria-label="Pacer harder">+</button></div>
   <span id="pwait" title="Waits for you: the pacer eases off when you fall more than 20 seconds behind. Strict: they ride away."><button data-wait="1" class="on">Waits for you</button><button data-wait="0">Strict</button></span>
-  <div class="lab">Controls</div>
-  <div class="acts" id="controls"><button id="voice" title="Say: rain, mist, overcast, sunny, skip, back, stop, carry on, hide or show. For a smart trainer: gear up, gear down, a gear number such as “four” or “gear four”, easier, harder, flat, full">Voice: off</button></div>
   <div class="acts">
     <button id="skip" title="Jump 250 m up the road (→ key; ← goes back)">Skip 250 m ›</button>
     <button id="logbtn" title="Distance you have ridden, kept in this browser">Ride log</button>
@@ -129,11 +137,16 @@
   <div class="foot"><button id="helpbtn" aria-label="Help" title="How to ride, voice commands and keys">?</button><button id="stop" title="Stop and see your ride. You can carry on afterwards. Also by voice: “stop”.">Stop ride</button></div>
 </div>
 <div id="log" hidden></div>
+<div id="devices" hidden role="dialog" aria-label="Connect bike">
+  <div class="dev"><div class="t"><b>Trainer</b><span id="ds-trainer">Not connected</span></div><button id="bt">Connect</button></div>
+  <div class="dev"><div class="t"><b>Voice</b><span id="ds-voice">Off</span></div><button id="voice" title="Say: rain, mist, overcast, sunny, skip, back, stop, carry on, hide or show. For a smart trainer: gear up, gear down, a gear number such as “four” or “gear four”, easier, harder, flat, full">Turn on</button></div>
+</div>
+<div id="toast"></div>
 <div id="help" hidden role="dialog" aria-label="Help">
   <h3>Riding</h3>
-  <p>Click <b>Connect trainer</b> and pedal. It needs Chrome or Edge. With no trainer, set your power with the slider in the menu.</p>
+  <p>Click <b>Connect bike</b> at the top right, connect your trainer and pedal. It needs Chrome or Edge. With no trainer, set your power with the slider in the menu.</p>
   <h3>Say it</h3>
-  <p>Turn on <b>Voice</b> in the menu, then say:</p>
+  <p>Turn on <b>Voice</b> from the same place, then say:</p>
   <dl>
     <dt>Weather</dt><dd>“rain”, “mist”, “overcast”, “sunny”</dd>
     <dt>Gears</dt><dd>“gear up”, “gear down”, “gear four”</dd>
@@ -1516,17 +1529,26 @@ $('stop').addEventListener('click', stopRide);
 $('resume').addEventListener('click', resumeRide);
 $('again').addEventListener('click', () => { if (st.newRide) st.newRide(); st.dist = st.time = st.work = st.climb = 0; st.track = []; st.sampled = -1; if (st.pacerReset) st.pacerReset(); resumeRide(); });
 // the menu: one button, the M key, and a click on the scenery closes it. The ride log shares its corner, so only one is open.
+let toastT = 0;
+const toast = t => { $('toast').textContent = t; $('toast').style.opacity = 1; clearTimeout(toastT); toastT = setTimeout(() => { $('toast').style.opacity = 0; }, 1600); };
+st.toast = toast;
+const setDevices = open => {
+  $('devices').hidden = !open; $('devbtn').classList.toggle('on', open); $('devbtn').setAttribute('aria-expanded', open);
+  if (open) { setMenu(false); $('help').hidden = true; if (!$('log').hidden) $('logbtn').click(); }
+};
+$('devbtn').addEventListener('click', () => setDevices($('devices').hidden));
+st.setDevices = setDevices;
 const setMenu = open => {
   $('menu').hidden = !open; $('menubtn').classList.toggle('on', open); $('menubtn').textContent = open ? '✕' : '⋯'; $('menubtn').setAttribute('aria-expanded', open);
   if (open && !$('log').hidden) $('logbtn').click();
-  if (open) $('help').hidden = true;
+  if (open) { $('help').hidden = true; setDevices(false); }
 };
 $('helpbtn').addEventListener('click', () => { setMenu(false); $('help').hidden = false; });
 $('helpclose').addEventListener('click', () => { $('help').hidden = true; });
 $('menubtn').addEventListener('click', () => setMenu($('menu').hidden));
-$('c').addEventListener('click', () => { setMenu(false); $('help').hidden = true; $('places').hidden = true; if (!$('log').hidden) $('logbtn').click(); });
+$('c').addEventListener('click', () => { setMenu(false); setDevices(false); $('help').hidden = true; $('places').hidden = true; if (!$('log').hidden) $('logbtn').click(); });
 addEventListener('keydown', e => { if ((e.key === 'm' || e.key === 'M') && !e.metaKey && !e.ctrlKey && !e.altKey) setMenu($('menu').hidden); });
-$('logbtn').addEventListener('click', () => setTimeout(() => { if (!$('log').hidden) { setMenu(false); $('help').hidden = true; } }, 0));   // after the log has opened
+$('logbtn').addEventListener('click', () => setTimeout(() => { if (!$('log').hidden) { setMenu(false); setDevices(false); $('help').hidden = true; } }, 0));   // after the log has opened
 /* Smart trainer. Power is read from the Cycling Power service. If the trainer also has the Fitness Machine
    Service (FTMS), the game takes control of it and sends the road gradient, so climbs feel harder on the bike.
    Without FTMS, or if the trainer refuses control, it stays power only. */
@@ -1564,9 +1586,11 @@ const TRAINER_KEY = 'golden-hour-ride-trainer';     // the last trainer used: { 
 const lastTrainer = () => { try { return JSON.parse(localStorage.getItem(TRAINER_KEY)) || null; } catch { return null; } };
 const btLabel = () => {
   const last = lastTrainer();
-  $('bt').classList.toggle('live', !!bike.dev);
-  $('bt').textContent = bike.dev ? (bike.point ? 'Trainer: power and gradient' : 'Trainer: power only')
-    : bike.known || (last && navigator.bluetooth && navigator.bluetooth.getDevices) ? 'Reconnect trainer' : 'Connect trainer';
+  const known = bike.known || (last && navigator.bluetooth && navigator.bluetooth.getDevices);
+  $('dd-trainer').className = 'dd' + (bike.dev ? (bike.point ? ' ok' : ' warn') : '');
+  $('ds-trainer').textContent = bike.dev ? (bike.point ? 'Power and gradient' : 'Power only: no gears or hills') : 'Not connected';
+  $('bt').textContent = bike.dev ? (bike.point ? 'Change' : 'Retry') : known ? 'Reconnect' : 'Connect';
+  $('devlabel').textContent = bike.dev ? (bike.point ? 'Bike connected' : 'Bike: power only') : 'Connect bike';   // the chip asks first, then reports
 };
 $('gless').addEventListener('click', () => setGear(GEAR - 1));
 $('gmore').addEventListener('click', () => setGear(GEAR + 1));
@@ -1652,7 +1676,7 @@ async function useTrainer(dev) {
 // the trainer dropped out (out of range, asleep, a blip): try it again a few times before giving up
 async function rejoin(dev) {
   while (!bike.dev && bike.known === dev && bike.tries < 6) {
-    bike.tries++; $('bt').textContent = 'Reconnecting…';
+    bike.tries++; $('ds-trainer').textContent = 'Reconnecting…';
     await new Promise(r => setTimeout(r, 2500));
     if (bike.dev || bike.known !== dev) return;
     try { await useTrainer(dev); return; } catch (err) { clearInterval(bike.timer); bike.dev = bike.point = null; }
@@ -1670,20 +1694,20 @@ async function knownTrainers() {
 }
 
 $('bt').addEventListener('click', async () => {
-  if (!navigator.bluetooth) { $('bt').textContent = 'Needs Chrome or Edge'; return; }
+  if (!navigator.bluetooth) { $('ds-trainer').textContent = 'Needs Chrome or Edge'; return; }
   if (bike.busyJoin) return;
   bike.busyJoin = true; bike.tries = 99;                    // a click takes over from any automatic retry
   try {
     if (!bike.dev) {
       for (const dev of await knownTrainers()) {
-        $('bt').textContent = 'Reconnecting…';
+        $('ds-trainer').textContent = 'Reconnecting…';
         try { await useTrainer(dev); return; } catch (err) { clearInterval(bike.timer); bike.dev = bike.point = null; }
       }
     }
     // nothing remembered, or it did not answer: show the browser's list of trainers nearby
     btLabel();
     const dev = await navigator.bluetooth.requestDevice({ filters: [{ services: ['cycling_power'] }, { services: [FTMS] }], optionalServices: ['cycling_power', FTMS] });
-    $('bt').textContent = 'Connecting…';
+    $('ds-trainer').textContent = 'Connecting…';
     if (bike.dev && bike.dev !== dev) { const old = bike.dev; bike.known = dev; try { old.gatt.disconnect(); } catch {} }
     await useTrainer(dev);
   } catch (err) { if (!bike.dev) { clearInterval(bike.timer); bike.point = null; } btLabel(); }
@@ -1905,8 +1929,12 @@ setHills(HILLS * 100);
     [/\b(hide|hidden)\b/, 'Info hidden', () => setClean(true)],
     [/\b(show|info|display)\b/, 'Info shown', () => setClean(false)]];
   let rec = null, on = false, last = 0;
-  // the Voice switch lives in the menu; while it is on, a quiet chip by the menu button shows what was last heard
-  const label = t => { btn.textContent = on ? 'Voice: on' : t; btn.classList.toggle('on', on); $('heard').hidden = !on; $('heard').textContent = t.replace('Voice: ', '').replace(/^listening$/, 'Listening'); };
+  // Voice is a row in Devices: a line of status and a switch. Whatever it acts on also flashes up as a toast.
+  const label = t => {
+    const said = t.replace('Voice: ', ''), plain = { off: 'Off', listening: 'Listening', blocked: 'Blocked: allow the microphone', 'needs Chrome': 'Needs Chrome or Edge' }[said];
+    btn.textContent = on ? 'Turn off' : 'Turn on'; $('dd-voice').className = 'dd' + (on ? ' ok' : '');
+    $('ds-voice').textContent = plain || 'Heard: ' + said; if (!plain) toast(said);
+  };
   if (!SR) { btn.title = 'Voice control needs Chrome or Edge'; btn.addEventListener('click', () => label('Voice: needs Chrome')); }
   else btn.addEventListener('click', () => {
     if (on) { on = false; rec.stop(); label('Voice: off'); return; }
@@ -2027,6 +2055,8 @@ let lean = 0, phase = 0, grade = 0, huT = 0, first = true;
 // scenery mode's weather, in order, and how many seconds each one stays
 const SCENE_PLAN = XMAS ? [['snow', 280], ['mist', 100], ['snow', 180], ['golden', 95]] : [['golden', 200], ['mist', 110], ['rain', 130], ['overcast', 70], ['golden', 90]];
 let scene_t = 0, scene_i = 0;
+// the first time someone opens the ride in this browser, Devices opens by itself as the "get ready" step
+try { if (SCENERY === null && !localStorage.getItem('golden-hour-ride-welcomed')) { localStorage.setItem('golden-hour-ride-welcomed', '1'); setDevices(true); } } catch {}
 if (SCENERY !== null) { setClean(true); st.target = st.power = 90; if (SCENERY === 'nobars') rig.visible = false; }
 
 function tick() {
