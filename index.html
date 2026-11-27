@@ -2024,8 +2024,108 @@ function startAudio() {
     src.connect(f).connect(g).connect(ac.destination); src.start();
     return { f, g };
   };
-  audio = { ac, wind: mk('bandpass', 500, 0.5), tyre: mk('lowpass', 240, 0.8), rain: mk('highpass', 2600, 0.5) };
+  audio = { ac, buf, wind: mk('bandpass', 500, 0.5), tyre: mk('lowpass', 240, 0.8), rain: mk('highpass', 2600, 0.5) };
+  if (XMAS) startXmas(audio);
 }
+
+/* ---------- Christmas sounds, all made here rather than loaded: snow crunching under the tyres, a sleigh going by
+   now and then, a church far down the valley ringing rounds, and a fire and a music box from each chalet as you pass ---------- */
+let xmas = null;
+function startXmas(a) {
+  const { ac, buf } = a;
+  // one shared hall: a long, soft echo made from decaying noise, for things heard across the valley
+  const ir = ac.createBuffer(2, ac.sampleRate * 3.5, ac.sampleRate);
+  for (let ch = 0; ch < 2; ch++) { const d = ir.getChannelData(ch); for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / d.length, 3.2); }
+  const hall = ac.createConvolver(); hall.buffer = ir; hall.connect(ac.destination);
+  const bus = (wet, dry = 1) => {                          // a gain that feeds the speakers and some of the hall
+    const g = ac.createGain(), p = ac.createStereoPanner(), w = ac.createGain(), o = ac.createGain();
+    g.connect(p); p.connect(o).connect(ac.destination); p.connect(w).connect(hall); o.gain.value = dry; w.gain.value = wet;
+    return { g, p };
+  };
+  xmas = {
+    crunch: bus(0.05), sleigh: bus(0.35), church: bus(0.9, 0.25), house: bus(0.12),
+    nextSleigh: ac.currentTime + 25 + Math.random() * 20, nextChurch: ac.currentTime + 45 + Math.random() * 30,
+    grain: 0, pop: 0, box: { i: 0, t: 0, on: false },
+  };
+  const lp = ac.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 1600;   // the church is far away: no sparkle left
+  xmas.church.p.disconnect(); xmas.church.p.connect(lp);
+  for (const n of [ac.destination, hall]) { const g = ac.createGain(); g.gain.value = n === hall ? 0.9 : 0.25; lp.connect(g).connect(n); }
+  xmas.house.g.gain.value = 0;
+}
+
+// a struck metal sound: a few sine partials, each dying away on its own
+function strike(t, f, parts, gain, out) {
+  const ac = audio.ac;
+  for (const [ratio, amp, decay] of parts) {
+    const o = ac.createOscillator(), g = ac.createGain();
+    o.frequency.value = f * ratio;
+    g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(gain * amp, t + 0.004); g.gain.exponentialRampToValueAtTime(0.0001, t + decay);
+    o.connect(g).connect(out); o.start(t); o.stop(t + decay + 0.05);
+  }
+}
+// a short burst of the noise through a filter: one crunch of snow, one crackle of the fire
+function grain(t, dur, type, freq, q, gain, out) {
+  const ac = audio.ac, s = ac.createBufferSource(), f = ac.createBiquadFilter(), g = ac.createGain();
+  s.buffer = audio.buf; f.type = type; f.frequency.value = freq; f.Q.value = q;
+  g.gain.setValueAtTime(gain, t); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  s.connect(f).connect(g).connect(out); s.start(t, Math.random() * 1.8, dur + 0.01);
+}
+
+const SLEIGH = [[1, 1, 0.22], [1.52, 0.7, 0.16], [2.32, 0.5, 0.11], [3.1, 0.3, 0.08]];
+function sleighBy() {                                       // a sleigh passes, left to right or right to left, about four seconds
+  const ac = audio.ac, t0 = ac.currentTime + 0.05, len = 4.2, from = Math.random() < 0.5 ? -0.8 : 0.8;
+  const { g, p } = xmas.sleigh, shake = Math.max(0.11, 0.24 - st.v * 0.01);   // ride faster, and the bells shake faster
+  g.gain.cancelScheduledValues(t0); g.gain.setValueAtTime(0, t0); g.gain.linearRampToValueAtTime(0.25, t0 + len * 0.45); g.gain.linearRampToValueAtTime(0, t0 + len);
+  p.pan.cancelScheduledValues(t0); p.pan.setValueAtTime(from, t0); p.pan.linearRampToValueAtTime(-from, t0 + len);
+  for (let t = t0; t < t0 + len; t += shake * (0.9 + Math.random() * 0.2))
+    for (let k = 3 + Math.random() * 4 | 0; k > 0; k--) strike(t + Math.random() * 0.035, 2300 + Math.random() * 900, SLEIGH, 0.05, g);
+  return 'Sleigh';
+}
+
+const CHURCH = [[0.5, 0.5, 6], [1, 1, 4.5], [1.2, 0.55, 3.6], [1.5, 0.35, 3], [2, 0.4, 2.4], [2.5, 0.18, 1.8], [3, 0.12, 1.4]];
+function churchBells() {                                    // rounds on six bells, three times through, from down the valley
+  const ac = audio.ac, t0 = ac.currentTime + 0.05, notes = [392, 349.2, 329.6, 293.7, 261.6, 246.9], g = xmas.church.g;
+  g.gain.cancelScheduledValues(t0); g.gain.setValueAtTime(0.06, t0);
+  xmas.church.p.pan.value = Math.random() * 1.2 - 0.6;
+  for (let r = 0; r < 3; r++) notes.forEach((f, i) => strike(t0 + (r * 7 + i) * 0.62, f * (1 + (Math.random() - 0.5) * 0.004), CHURCH, 0.12, g));
+  return 'Bells';
+}
+
+// Silent Night (Franz Gruber, 1818), as a music box plays it: [note, beats]
+const BOX = [[79,1.5],[81,.5],[79,1],[76,3],[79,1.5],[81,.5],[79,1],[76,3],[86,2],[86,1],[83,3],[84,2],[84,1],[79,3],
+  [81,2],[81,1],[84,1.5],[83,.5],[81,1],[79,1.5],[81,.5],[79,1],[76,3],[81,2],[81,1],[84,1.5],[83,.5],[81,1],[79,1.5],[81,.5],[79,1],[76,3],
+  [86,2],[86,1],[89,1.5],[86,.5],[83,1],[84,3],[88,3],[84,1.5],[79,.5],[76,1],[79,1.5],[77,.5],[74,1],[72,6]];
+const BOX_TINE = [[1, 1, 1.6], [3, 0.18, 0.4], [5.4, 0.06, 0.15]];
+
+function stepXmas(dt) {
+  const ac = audio.ac, t = ac.currentTime, x = xmas;
+  // snow under the tyres: many small soft crunches, more of them the faster you go
+  x.grain += Math.min(32, st.v * 3.2) * dt * (st.v > 0.5);
+  for (; x.grain >= 1; x.grain--) grain(t + Math.random() * 0.03, 0.02 + Math.random() * 0.04, 'bandpass', 650 + Math.random() * 900, 1.2, 0.08 + Math.random() * 0.1, x.crunch.g);
+  x.crunch.g.gain.setTargetAtTime(Math.min(1, st.v / 9) * 1.1, t, 0.2);
+  if (t > x.nextSleigh) { sleighBy(); x.nextSleigh = t + 60 + Math.random() * 70; }
+  if (t > x.nextChurch) { churchBells(); x.nextChurch = t + 200 + Math.random() * 150; }
+  // the nearest chalet: how near, and which side
+  let best = 1e9, cx = 0, cz = 0;
+  for (const c of chalets) { const d = (c[0] - camera.position.x) ** 2 + (c[1] - camera.position.z) ** 2; if (d < best) { best = d; cx = c[0]; cz = c[1]; } }
+  const dist = Math.sqrt(best), near = Math.max(0, 1 - dist / 110) ** 2;
+  x.house.g.gain.setTargetAtTime(near * 0.9, t, 0.3);
+  if (near > 0) {
+    const e = camera.matrixWorld.elements, dx = cx - camera.position.x, dz = cz - camera.position.z;
+    x.house.p.pan.setTargetAtTime(Math.max(-0.9, Math.min(0.9, (e[0] * dx + e[2] * dz) / (dist || 1))), t, 0.2);
+    x.pop += (8 + Math.random() * 14) * dt;                // the fire: small crackles, and now and then a bigger snap
+    for (; x.pop >= 1; x.pop--) grain(t + Math.random() * 0.05, 0.004 + Math.random() * 0.01, 'highpass', 1500 + Math.random() * 2500, 0.7, Math.random() < 0.1 ? 0.5 : 0.12, x.house.g);
+    const b = x.box;
+    if (!b.on) { b.on = true; b.i = 0; b.t = t + 0.3; }
+    while (b.t < t + 0.25) {
+      const [m, beats] = BOX[b.i];
+      strike(b.t, 440 * 2 ** ((m - 69) / 12), BOX_TINE, 0.05, x.house.g);
+      b.t += beats * 0.4; b.i++;
+      if (b.i === BOX.length) { b.i = 0; b.t += 2.5; }
+    }
+  } else x.box.on = false;                                  // out of earshot; the tune starts again at the next chalet
+}
+st.sleigh = () => audio && xmas ? sleighBy() : 'No sound yet'; st.church = () => audio && xmas ? churchBells() : 'No sound yet'; st.audio = () => ({ audio, xmas });
 addEventListener('pointerdown', startAudio); addEventListener('keydown', startAudio);
 
 /* ---------- ride ---------- */
@@ -2258,8 +2358,9 @@ function tick() {
     const t = audio.ac.currentTime;
     audio.wind.g.gain.setTargetAtTime(Math.min(0.5, st.v * st.v / 400 * 0.35), t, 0.2);
     audio.wind.f.frequency.setTargetAtTime(300 + st.v * 40, t, 0.2);
-    audio.tyre.g.gain.setTargetAtTime(Math.min(0.35, st.v / 15 * 0.25), t, 0.2);
+    audio.tyre.g.gain.setTargetAtTime(Math.min(0.35, st.v / 15 * 0.25) * (XMAS ? 0.4 : 1), t, 0.2);   // on snow the hiss is mostly crunch
     audio.rain.g.gain.setTargetAtTime(wx.rain * 0.1, t, 0.4);
+    if (xmas) stepXmas(Math.min(dt, 0.1));
   }
 
   huT -= dt;
