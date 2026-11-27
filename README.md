@@ -30,16 +30,27 @@ Then open http://localhost:8791/.
 
 - `index.html` – the whole ride.
 - `assets/` – textures and course data. `textures.js` is an embedded copy of the textures, used only when the page is opened straight from disk.
-- `workouts/` – the workouts that come with the ride, as MyWhoosh workout files (.json). To add one, put the file here and add its name to `workouts/index.json`.
-  A workout can have a spoken coach in `<name>.coach.json`: lines timed within each step (`at` seconds from its start, or `before_end`), a `finish` line, and `feedback` pools of short remarks for power too high or low, cadence too high or low, and praise. `rules` set how long you must be off target before a remark (8 s), the least time between remarks (30 s) and the quiet at the start of each step. Speak the lines with Kyutai Pocket TTS (CPU only; the first run downloads the model):
+- `workouts/` – the workouts that come with the ride, one folder each, so adding or removing a workout means adding or removing its folder and nothing else:
 
-  ```bash
-  uv run tools/build_coach_audio.py workouts/sweet-spot-3x10.coach.json
+  ```
+  workouts/
+    sweet-spot-3x10/
+      workout.json      the MyWhoosh workout file
+      coach.json        optional: the spoken coach
+      audio/            the coach's clips, written by tools/build_coach_audio.py
+    _shared/            spoken numbers used by every workout with the same voice
   ```
 
-  `checkins` make the coach read out live numbers every few minutes (`every`, from `first_after` seconds in), taking turns between heart rate ("Let's look at your heart rate. 142 beats per minute. That is very solid.") and power with cadence. Each is put together from short clips: a phrase, a number, a unit and a verdict. Heart rate is judged against Max HR in the Workout panel and the step's intensity; power against the target. The numbers (30–220, then watts in fives to 600) are spoken once per voice into a shared `workouts/audio/_numbers-…/` folder.
+  Folders starting with `_` are not workouts. The page finds the workouts from the folder listing that `python3 -m http.server` shows; `deploy.sh` writes a `workouts/index.json` for the published site, where there is no listing.
+  A workout can have a spoken coach in `coach.json`: lines timed within each step (`at` seconds from its start, or `before_end`), a `finish` line, and `feedback` pools of short remarks for power too high or low, cadence too high or low, and praise. `rules` set how long you must be off target before a remark (8 s), the least time between remarks (30 s) and the quiet at the start of each step. Speak the lines with Kyutai Pocket TTS (CPU only; the first run downloads the model):
+
+  ```bash
+  uv run tools/build_coach_audio.py workouts/sweet-spot-3x10
+  ```
+
+  `checkins` make the coach read out live numbers every few minutes (`every`, from `first_after` seconds in), taking turns between heart rate ("Let's look at your heart rate. 142 beats per minute. That is very solid.") and power with cadence. Each is put together from short clips: a phrase, a number, a unit and a verdict. Heart rate is judged against Max HR in the Workout panel and the step's intensity; power against the target. The numbers (30–220, then watts in fives to 600) are spoken once per voice into a shared `workouts/_shared/numbers-…/` folder.
   `voice` is a built-in pocket-tts voice (alba, eve, marius, …) or a voice file in the project, such as `voices/announcer.safetensors` made with `uvx pocket-tts export-voice <audio> voices/announcer.safetensors` (exporting needs Kyutai's gated voice-cloning weights; using the file does not). Export it with the same `--language` as the coach file.
-  It writes small .m4a clips and a `manifest.json` to `workouts/audio/<name>/`, and only re-speaks lines that changed. A line with no clip is read by the browser's own voice. The Coach voice checkbox in the Workout panel turns it off.
+  It writes small .m4a clips and a `manifest.json` to the workout's `audio/` folder, and only re-speaks lines that changed. A line with no clip is read by the browser's own voice. The Coach voice checkbox in the Workout panel turns it off.
 - `tools/` – scripts that build the Leckhampton course data, and `trainer-probe.html` for finding out how a trainer talks over Bluetooth.
 - `deploy.sh` – publishes to Spacefast.
 

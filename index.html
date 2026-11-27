@@ -1773,20 +1773,20 @@ function fromMyWhoosh(j) {
     return { dur, rpm, kind: 'Free ride' };
   }) };
 }
-/* Coach: a workout can have a spoken coach, in workouts/<name>.coach.json: lines timed within each step that explain it and
+/* Coach: a workout can have a spoken coach, in workouts/<name>/coach.json: lines timed within each step that explain it and
    keep you going, and short remarks for when you ride too hard, too easy, or off the cadence. The clips are spoken ahead of
-   time by tools/build_coach_audio.py (pocket-tts) into workouts/audio/<name>/; a line without a clip is read by the browser. */
+   time by tools/build_coach_audio.py (pocket-tts) into workouts/<name>/audio/; a line without a clip is read by the browser. */
 const COACH_KEY = 'golden-hour-ride-coach', LANGS = { english: 'en-GB', german: 'de-DE', spanish: 'es-ES', french: 'fr-FR', italian: 'it-IT', portuguese: 'pt-PT', dutch: 'nl-NL' };
-async function loadCoach(base) {
+async function loadCoach(dir) {                           // dir: the workout's folder, ending in /
   try {
-    const c = await (await fetch(`workouts/${encodeURIComponent(base)}.coach.json`, { cache: 'no-cache' })).json();
-    const man = await fetch(`workouts/audio/${encodeURIComponent(base)}/manifest.json`, { cache: 'no-cache' }).then(r => r.json()).catch(() => ({ clips: {} }));
+    const c = await (await fetch(dir + 'coach.json', { cache: 'no-cache' })).json();
+    const man = await fetch(dir + 'audio/manifest.json', { cache: 'no-cache' }).then(r => r.json()).catch(() => ({ clips: {} }));
     c.rules = Object.assign({ after_seconds_off: 8, min_gap: 30, quiet_after_step_start: 15, cadence_tolerance: 8, praise_after: 120 }, c.rules);
     c.byStep = []; for (const s of c.steps || []) c.byStep[s.step - 1] = s.cues || [];
-    c.clips = man.clips || {}; c.dir = `workouts/audio/${encodeURIComponent(base)}/`; c.lang = LANGS[c.language] || 'en-GB';
+    c.clips = man.clips || {}; c.dir = dir + 'audio/'; c.lang = LANGS[c.language] || 'en-GB';
     if (man.numbers) {                                    // spoken numbers for the check-ins, shared by every workout with this voice
-      const dir = `workouts/audio/${encodeURIComponent(man.numbers)}/`;
-      c.nums = await fetch(dir + 'manifest.json', { cache: 'no-cache' }).then(r => r.json()).then(m => ({ dir, clips: m.clips || {} })).catch(() => null);
+      const ndir = `workouts/_shared/${encodeURIComponent(man.numbers)}/`;
+      c.nums = await fetch(ndir + 'manifest.json', { cache: 'no-cache' }).then(r => r.json()).then(m => ({ dir: ndir, clips: m.clips || {} })).catch(() => null);
     }
     return c;
   } catch (err) { return null; }                         // no coach for this workout
@@ -1895,12 +1895,26 @@ function coachTick(dt) {
   checkinTick(c, r, s, dt);
 }
 
-// The workouts that come with the ride: MyWhoosh files in workouts/, named in workouts/index.json (a web server can't list a folder).
+// The workouts that come with the ride: one folder each in workouts/, holding workout.json (a MyWhoosh file) and, if it has a
+// coach, coach.json and audio/. Add or remove a workout by adding or removing its folder; folders starting with _ are not
+// workouts. A web server can't be asked for a folder's contents, so the list comes from workouts/index.json, which
+// deploy.sh writes, or else from the folder listing a local server such as python's http.server shows.
+async function builtInWorkoutNames() {
+  const r = await fetch('workouts/index.json', { cache: 'no-cache' });
+  if (r.ok) return r.json();
+  const html = await (await fetch('workouts/', { cache: 'no-cache' })).text();
+  const doc = new DOMParser().parseFromString(html, 'text/html');
+  return [...new Set([...doc.querySelectorAll('a[href]')].map(a => decodeURIComponent(a.getAttribute('href')))
+    .filter(h => /^[^/_.?#][^/?#]*\/$/.test(h)).map(h => h.slice(0, -1)))].sort();
+}
 async function loadBuiltInWorkouts() {
   try {
-    const names = await (await fetch('workouts/index.json', { cache: 'no-cache' })).json();
-    const got = await Promise.all(names.map(n => fetch('workouts/' + encodeURIComponent(n), { cache: 'no-cache' })
-      .then(r => r.json()).then(async j => Object.assign(fromMyWhoosh(j), { builtIn: true, coach: await loadCoach(n.replace(/\.json$/, '')) })).catch(() => null)));
+    const names = await builtInWorkoutNames();
+    const got = await Promise.all(names.map(n => {
+      const dir = `workouts/${encodeURIComponent(n)}/`;
+      return fetch(dir + 'workout.json', { cache: 'no-cache' }).then(r => r.json())
+        .then(async j => Object.assign(fromMyWhoosh(j), { builtIn: true, coach: await loadCoach(dir) })).catch(() => null);
+    }));
     wo.builtIn = got.filter(Boolean);
   } catch (err) { wo.builtIn = []; }                     // opened straight from disk, or the folder is missing: only your own workouts
   if (!$('wo').hidden) drawWoPanel();

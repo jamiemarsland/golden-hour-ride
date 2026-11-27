@@ -1,7 +1,7 @@
 {
   "language": "english",
   "voice": "voices/announcer.safetensors",
-  "numbers": "_numbers-2c87d098d4",
+  "numbers": "numbers-2c87d098d4",
   "clips": {
     "s1-extra-60": {
       "file": "s1-extra-60-fef396482bd5.m4a",

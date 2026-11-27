@@ -4,13 +4,13 @@
 # ///
 """Speak a workout's coach texts with Kyutai Pocket TTS, ahead of time, for the ride to play.
 
-Reads workouts/<name>.coach.json and writes one clip per text to workouts/audio/<name>/, plus a
+Reads a workout's coach.json and writes one clip per text to the workout's audio/ folder, plus a
 manifest.json the ride reads to find them. Clips whose text, voice and language have not changed
 are kept, so editing one line only re-speaks that line. Clips are AAC (.m4a) when macOS's afconvert
 is there (about 15 times smaller than the WAV pocket-tts writes), 16-bit WAV otherwise.
 
-    uv run tools/build_coach_audio.py workouts/sweet-spot-3x10.coach.json
-    uv run tools/build_coach_audio.py workouts/*.coach.json --force        # re-speak everything
+    uv run tools/build_coach_audio.py workouts/sweet-spot-3x10
+    uv run tools/build_coach_audio.py workouts/*/ --force        # re-speak everything
 """
 import argparse, hashlib, json, shutil, subprocess, sys, tempfile, time
 from pathlib import Path
@@ -20,6 +20,7 @@ import scipy.io.wavfile
 
 
 ROOT = Path(__file__).resolve().parent.parent
+SHARED = ROOT / "workouts" / "_shared"                            # what several workouts use: the spoken numbers
 
 
 def resolve_voice(voice: str) -> tuple[str, str]:
@@ -70,7 +71,6 @@ def number_words(n: int) -> str:
 
 def build(path: Path, force: bool, model_cache: dict) -> None:
     coach = json.loads(path.read_text(encoding="utf-8"))
-    name = path.name.removesuffix(".coach.json")
     language = coach.get("language", "english")
     from pocket_tts.default_parameters import DEFAULT_VOICE_FOR_LANGUAGE, DEFAULT_VOICE_FALLBACK
     voice = coach.get("voice") or DEFAULT_VOICE_FOR_LANGUAGE.get(language, DEFAULT_VOICE_FALLBACK)   # the language's own voice by default
@@ -79,7 +79,7 @@ def build(path: Path, force: bool, model_cache: dict) -> None:
     if temp is not None: voice_key += f"@t{float(temp)}"         # a new temperature re-speaks the lines
     use_aac = shutil.which("afconvert") is not None
     ext = ".m4a" if use_aac else ".wav"
-    print(f"{path.name}: {language}, voice {voice}, temperature {temp if temp is not None else 'default'}")
+    print(f"{path.parent.name}: {language}, voice {voice}, temperature {temp if temp is not None else 'default'}")
 
     def model_and_voice():
         key = (language, voice_src, temp)
@@ -129,21 +129,24 @@ def build(path: Path, force: bool, model_cache: dict) -> None:
 
     extra = {}
     if coach.get("checkins"):                                     # the shared numbers, in a folder named after the voice
-        pack = "_numbers-" + hashlib.sha1(f"{language}|{voice_key}".encode()).hexdigest()[:10]
+        pack = "numbers-" + hashlib.sha1(f"{language}|{voice_key}".encode()).hexdigest()[:10]
         say = number_words if language == "english" else str
-        render(path.parent / "audio" / pack, {f"n{n}": say(n) for n in NUMBERS}, {"numbers": NUMBERS})
+        render(SHARED / pack, {f"n{n}": say(n) for n in NUMBERS}, {"numbers": NUMBERS})
         extra["numbers"] = pack
-    render(path.parent / "audio" / name, texts(coach), extra)
-    print(f"  wrote {path.parent / 'audio' / name / 'manifest.json'}")
+    render(path.parent / "audio", texts(coach), extra)
+    print(f"  wrote {path.parent / 'audio' / 'manifest.json'}")
 
 
 def main() -> None:
     p = argparse.ArgumentParser(description="Speak workout coach texts with pocket-tts")
-    p.add_argument("files", nargs="+", type=Path, help="one or more workouts/<name>.coach.json")
+    p.add_argument("workouts", nargs="+", type=Path, help="one or more workout folders, workouts/<name> (or their coach.json)")
     p.add_argument("--force", action="store_true", help="speak every clip again")
     args = p.parse_args()
     cache = {}
-    for f in args.files:
+    for w in args.workouts:
+        f = w / "coach.json" if w.is_dir() else w
+        if not f.exists():
+            print(f"{w}: no coach.json, skipped"); continue
         build(f, args.force, cache)
 
 
