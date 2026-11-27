@@ -1569,7 +1569,7 @@ const setHills = pct => {
   HILLS = Math.max(0, Math.min(100, Math.round(pct / 10) * 10)) / 100;
   try { localStorage.setItem(HILLS_KEY, String(Math.round(HILLS * 100))); } catch {}
   $('hval').textContent = HILLS ? 'Hills ' + Math.round(HILLS * 100) + ' %' : 'Hills off';
-  bike.at = 0;                                      // tell the trainer straight away
+  bike.at = 0; if (bike.point) sendGrade();        // tell the trainer now, not on the next quarter-second tick
 };
 // Virtual gears, for a smart trainer that takes the gradient. There is no real chain to move, so a gear change
 // nudges the gradient the trainer is told: each gear above the middle one feels like 0.7 % more slope, each one
@@ -1580,7 +1580,7 @@ st.bike = bike; st.sendGrade = () => sendGrade();   // for testing without a tra
 const setGear = n => {
   GEAR = Math.max(1, Math.min(GEARS, Math.round(n)));
   $('h-ge').textContent = GEAR; $('gval').textContent = 'Gear ' + GEAR;
-  bike.at = 0;                                      // tell the trainer straight away
+  bike.at = 0; if (bike.point) sendGrade();        // tell the trainer now, not on the next quarter-second tick
   return 'Gear ' + GEAR;
 };
 const TRAINER_KEY = 'golden-hour-ride-trainer';     // the last trainer used: { id, name }, kept in this browser
