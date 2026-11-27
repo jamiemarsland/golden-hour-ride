@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Trainer probe</title>
+<style>
+  :root { --bg: #f6f4ef; --fg: #1d1b18; --muted: #6b665e; --line: #d9d4c9; --accent: #9a5b13; --code: #ffffff; }
+  @media (prefers-color-scheme: dark) { :root { --bg: #151412; --fg: #ece8e1; --muted: #9b958b; --line: #34312c; --accent: #f0b060; --code: #1d1b18; } }
+  body { margin: 0; padding: 20px 16px 40px; background: var(--bg); color: var(--fg); font: 15px/1.45 -apple-system, "Helvetica Neue", Arial, sans-serif; }
+  main { max-width: 960px; margin: 0 auto; }
+  h1 { font-size: 22px; margin: 0 0 6px; } h2 { font-size: 15px; margin: 26px 0 8px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+  p { margin: 6px 0; color: var(--muted); }
+  button, select, input { font: inherit; color: var(--fg); background: var(--code); border: 1px solid var(--line); border-radius: 8px; padding: 7px 12px; }
+  button { cursor: pointer; } button:hover { border-color: var(--accent); }
+  .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 8px 0; }
+  #hex { flex: 1 1 320px; font-family: ui-monospace, Menlo, monospace; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  td, th { text-align: left; padding: 5px 8px 5px 0; border-top: 1px solid var(--line); vertical-align: top; }
+  td.mono, #log { font-family: ui-monospace, Menlo, monospace; word-break: break-all; }
+  #log { background: var(--code); border: 1px solid var(--line); border-radius: 8px; padding: 10px; height: 340px; overflow: auto; white-space: pre-wrap; font-size: 12px; margin: 0; }
+  #power { font-size: 28px; font-weight: 300; font-variant-numeric: tabular-nums; }
+  .warn { color: var(--accent); }
+</style>
+</head>
+<body>
+<main>
+<h1>Trainer probe</h1>
+<p>Connects to a trainer over Bluetooth, lists what it offers and logs everything it sends, so we can work out how to set its resistance.
+  Close every other app connected to the trainer first (nRF Connect, Bkool, Zwift): it takes one Bluetooth connection at a time.</p>
+<div class="row">
+  <button id="connect">Connect trainer</button>
+  <button id="copy">Copy log</button>
+  <button id="clear">Clear log</button>
+  <label><input type="checkbox" id="logpower"> Log every power message</label>
+  <span id="power">– W</span>
+</div>
+
+<h2>What the trainer offers</h2>
+<table><thead><tr><th>Service</th><th>Characteristic</th><th>Can</th><th>Label / value</th></tr></thead><tbody id="chars"><tr><td colspan="4">Not connected.</td></tr></tbody></table>
+
+<h2>Send a command</h2>
+<p>Pick where to write, type bytes in hex (or use a preset, which fills the box), then Send. Pedal gently while you try resistance commands, so you can feel a change.
+  <span class="warn">Only write to the f03ee002 characteristic for now; leave the beefe… ones alone until we know what they do.</span></p>
+<div class="row"><select id="target"></select><input id="hex" placeholder="e.g. a4 09 4e 05 33 ff ff ff ff 20 4e ff 07"><button id="send">Send</button></div>
+<div class="row">
+  <span><b>Bkool, as Kinomap sends it:</b></span>
+  <button data-raw="37 38 18 ff 08 0c ff ff">Rider setup</button>
+  <button data-bk="0">0 %</button><button data-bk="5">5 %</button><button data-bk="10">10 %</button><button data-bk="15">15 %</button><button data-bk="-5">−5 %</button>
+</div>
+<div class="row">
+  <span><b>Bkool ERG (hold power):</b></span>
+  <button data-erg="80" data-b1="6f">80 W</button><button data-erg="200" data-b1="6f">200 W</button>
+  <span>standard byte 1:</span><button data-erg="80" data-b1="ff">80 W</button><button data-erg="200" data-b1="ff">200 W</button>
+</div>
+<div class="row">
+  <span>ANT+ FE-C gradient:</span>
+  <button data-grade="0">0 %</button><button data-grade="5">5 %</button><button data-grade="10">10 %</button><button data-grade="-5">−5 %</button>
+  <label>channel <select id="chan"><option>5</option><option>0</option><option>1</option></select></label>
+</div>
+<div class="row">
+  <span>ANT+ FE-C resistance (page 48):</span>
+  <button data-res="0">0 %</button><button data-res="50">50 %</button><button data-res="100">100 %</button>
+</div>
+
+<h2>Log</h2>
+<pre id="log"></pre>
+</main>
+
+<script>
+const $ = id => document.getElementById(id);
+const VENDOR = ['f03eee01-4910-473c-be46-960948c2f59c', 'beefee02-4910-473c-be46-960948c2f59c'];
+const NAMES = { 0x1800: 'Generic Access', 0x1801: 'Generic Attribute', 0x180a: 'Device Information', 0x1818: 'Cycling Power', 0x1826: 'Fitness Machine',
+  0x2a63: 'Power Measurement', 0x2a65: 'Power Feature', 0x2a5d: 'Sensor Location', 0x2a66: 'Power Control Point', 0x2a29: 'Manufacturer', 0x2a24: 'Model',
+  0x2a26: 'Firmware', 0x2a27: 'Hardware', 0x2a28: 'Software', 0x2a00: 'Device Name' };
+const name = uuid => { const m = /^0000([0-9a-f]{4})-0000-1000-8000-00805f9b34fb$/.exec(uuid); return m ? (NAMES[parseInt(m[1], 16)] || '0x' + m[1]) : uuid; };
+const short = uuid => uuid.length > 12 ? uuid.slice(0, 8) : uuid;
+const bytes = dv => [...new Uint8Array(dv.buffer, dv.byteOffset, dv.byteLength)];
+const hex = dv => bytes(dv).map(b => b.toString(16).padStart(2, '0')).join(' ');
+const asText = dv => { const s = new TextDecoder().decode(dv); return /^[\x20-\x7e]+$/.test(s) ? s : null; };
+
+// ANT messages (as used by FE-C over Bluetooth): a4, length, message id, channel, data…, XOR checksum
+const antMsg = (chan, data) => { const m = [0xa4, data.length + 1, 0x4e, chan, ...data]; m.push(m.reduce((a, b) => a ^ b, 0)); return m; };
+const antNote = b => {
+  if (b[0] !== 0xa4 || b.length < 5) return '';
+  const ok = b.slice(0, -1).reduce((a, x) => a ^ x, 0) === b[b.length - 1];
+  return `  ← looks like an ANT message: id 0x${b[2].toString(16)}, channel ${b[3]}` + (b[2] === 0x4e ? `, data page 0x${b[4].toString(16)} (${b[4]})` : '') + (ok ? ', checksum OK' : ', checksum wrong');
+};
+
+const lines = [], t0 = performance.now();
+const log = msg => {
+  lines.push(((performance.now() - t0) / 1000).toFixed(2).padStart(8) + '  ' + msg);
+  if (lines.length > 3000) lines.splice(0, lines.length - 3000);
+  const el = $('log'), atEnd = el.scrollHeight - el.scrollTop - el.clientHeight < 30;
+  el.textContent = lines.join('\n'); if (atEnd) el.scrollTop = el.scrollHeight;
+};
+
+let dev = null, writable = [];
+async function describe(ch) {
+  let label = '';
+  try { const d = await ch.getDescriptor('gatt.characteristic_user_description'); label = asText(await d.readValue()) || ''; } catch {}
+  let value = '';
+  if (ch.properties.read) { try { const v = await ch.readValue(); value = (asText(v) ? `"${asText(v)}" ` : '') + `(${hex(v)})`; } catch (e) { value = '(read refused: ' + e.message + ')'; } }
+  return [label, value].filter(Boolean).join(' — ');
+}
+
+async function connect() {
+  if (!navigator.bluetooth) { log('This browser has no Web Bluetooth. Use Chrome or Edge, on http://localhost.'); return; }
+  dev = await navigator.bluetooth.requestDevice({
+    filters: [{ namePrefix: 'BKOOL' }, { namePrefix: 'ZYCLE' }, { services: ['cycling_power'] }],
+    optionalServices: [...VENDOR, 'cycling_power', 'device_information', 0x1826],
+  });
+  log(`Picked "${dev.name}" (${dev.id})`);
+  dev.addEventListener('gattserverdisconnected', () => log('*** trainer disconnected ***'));
+  const server = await dev.gatt.connect();
+  log('Connected. Reading services…');
+  const rows = []; writable = [];
+  for (const svc of await server.getPrimaryServices()) {
+    let chars = [];
+    try { chars = await svc.getCharacteristics(); } catch (e) { log(`  ${name(svc.uuid)}: ${e.message}`); }
+    for (const ch of chars) {
+      const p = ch.properties, can = ['read', 'write', 'writeWithoutResponse', 'notify', 'indicate'].filter(k => p[k]).join(', ');
+      const info = await describe(ch);
+      rows.push(`<tr><td>${name(svc.uuid)}</td><td class="mono">${name(ch.uuid)}</td><td>${can}</td><td class="mono">${info.replace(/</g, '&lt;')}</td></tr>`);
+      log(`  ${name(svc.uuid)} / ${name(ch.uuid)}  [${can}]  ${info}`);
+      if (p.write || p.writeWithoutResponse) writable.push(ch);
+      if (p.notify || p.indicate) {
+        const isPower = ch.uuid.startsWith('00002a63');
+        ch.addEventListener('characteristicvaluechanged', e => {
+          const v = e.target.value;
+          if (isPower) { $('power').textContent = v.getInt16(2, true) + ' W'; if (!$('logpower').checked) return; }
+          const b = bytes(v), guess = ch.uuid.startsWith('beefe004') ? `  [byte 7: ${b[7]}, byte 9: ${b[9]}]`        // candidates for speed and cadence
+            : ch.uuid.startsWith('f03ee006') ? `  [${b[0]} W, byte 4: ${b[4]}]` : '';
+          log(`← ${short(ch.uuid)}  ${hex(v)}${isPower ? `  (${v.getInt16(2, true)} W)` : ''}${guess}${antNote(b)}`);
+        });
+        try { await ch.startNotifications(); } catch (e) { log(`  could not subscribe to ${short(ch.uuid)}: ${e.message}`); }
+      }
+    }
+  }
+  $('chars').innerHTML = rows.join('') || '<tr><td colspan="4">No services the browser may use.</td></tr>';
+  $('target').innerHTML = writable.map((c, i) => `<option value="${i}">${name(c.uuid)}</option>`).join('');
+  const main = writable.findIndex(c => c.uuid.startsWith('f03ee002')); if (main >= 0) $('target').value = main;
+  log('Ready. Notifications from the trainer appear below as ←, what you send as →.');
+}
+
+async function send() {
+  const ch = writable[+$('target').value];
+  if (!ch) { log('Connect first.'); return; }
+  const b = ($('hex').value.match(/[0-9a-f]{2}/gi) || []).map(h => parseInt(h, 16));
+  if (!b.length) { log('Type some hex bytes first.'); return; }
+  const data = Uint8Array.from(b);
+  log(`→ ${short(ch.uuid)}  ${hex(new DataView(data.buffer))}${antNote(b)}`);
+  try {
+    if (ch.properties.write) await ch.writeValueWithResponse(data); else await ch.writeValueWithoutResponse(data);
+    log('  sent');
+  } catch (e) { log('  write failed: ' + e.message); }
+}
+
+$('connect').onclick = () => connect().catch(e => log('Connect failed: ' + e.message));
+$('send').onclick = send;
+$('clear').onclick = () => { lines.length = 0; $('log').textContent = ''; };
+$('copy').onclick = async () => { try { await navigator.clipboard.writeText(lines.join('\n')); log('(log copied)'); } catch { log('(could not copy: select the log and copy it by hand)'); } };
+const fill = m => { $('hex').value = m.map(b => b.toString(16).padStart(2, '0')).join(' '); };
+document.querySelectorAll('[data-grade]').forEach(b => b.onclick = () => {        // FE-C page 51, track resistance: grade in 0.01 % from −200 %
+  const v = Math.round((+b.dataset.grade + 200) / 0.01);
+  fill(antMsg(+$('chan').value, [0x33, 0xff, 0xff, 0xff, 0xff, v & 255, v >> 8, 0xff]));
+});
+// Bkool Smart Pro 3 / Zycle: raw 8-byte FE-C pages written to f03ee002 (seen in a Kinomap recording), byte 1 = 0x6f
+document.querySelectorAll('[data-raw]').forEach(b => b.onclick = () => { $('hex').value = b.dataset.raw; send(); });
+document.querySelectorAll('[data-bk]').forEach(b => b.onclick = () => {
+  const v = Math.round((+b.dataset.bk + 200) / 0.01);
+  fill([0x33, 0x6f, 0xff, 0xff, 0xff, v & 255, v >> 8, 0x00]); send();
+});
+document.querySelectorAll('[data-erg]').forEach(b => b.onclick = () => {           // FE-C page 49, target power in 0.25 W
+  const v = Math.round(+b.dataset.erg * 4);
+  fill([0x31, parseInt(b.dataset.b1, 16), 0xff, 0xff, 0xff, 0xff, v & 255, v >> 8]); send();
+});
+document.querySelectorAll('[data-res]').forEach(b => b.onclick = () => {          // FE-C page 48, basic resistance: 0.5 % steps
+  fill(antMsg(+$('chan').value, [0x30, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, Math.round(+b.dataset.res * 2)]));
+});
+</script>
+</body>
+</html>

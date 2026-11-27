@@ -37,7 +37,37 @@
   #log td:last-child { text-align: right; }
   #log .muted { opacity: .65; }
   #log button { margin-top: 12px; font: inherit; font-size: 11px; color: #fff; background: none; border: 1px solid rgba(255,255,255,.35); border-radius: 999px; padding: 4px 10px; cursor: pointer; }
-  body.clean #hud, body.clean #ctl, body.clean #log, body.clean #credit { display: none; }
+  #wo { position: fixed; top: 64px; right: 18px; width: 300px; max-height: 75vh; overflow: auto; padding: 14px 16px; border-radius: 14px;
+    background: rgba(20,16,12,.78); border: 1px solid rgba(255,255,255,.3); backdrop-filter: blur(8px); font-size: 13px; }
+  #wo h3 { margin: 0 0 10px; font-size: 11px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; opacity: .75; }
+  #wo label { display: flex; gap: 8px; align-items: center; margin: 0 0 8px; }
+  #wo input[type=number] { width: 64px; font: inherit; color: #fff; background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.35); border-radius: 6px; padding: 3px 6px; }
+  #wo table { width: 100%; border-collapse: collapse; margin: 6px 0 4px; }
+  #wo td { padding: 6px 0; border-top: 1px solid rgba(255,255,255,.14); vertical-align: middle; }
+  #wo td:last-child { text-align: right; white-space: nowrap; }
+  #wo button, #wohud button { font: inherit; font-size: 11px; color: #fff; background: none; border: 1px solid rgba(255,255,255,.4); border-radius: 999px; padding: 4px 10px; cursor: pointer; }
+  #wo button:hover, #wohud button:hover { background: rgba(255,255,255,.15); }
+  #wo .muted { opacity: .65; font-size: 11px; line-height: 1.4; margin-top: 8px; }
+  #wohud { position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%); width: min(560px, calc(100vw - 32px)); box-sizing: border-box; padding: 12px 14px 10px;
+    border-radius: 14px; background: rgba(20,16,12,.55); border: 1px solid rgba(255,255,255,.25); backdrop-filter: blur(8px); font-variant-numeric: tabular-nums; }
+  #wohud .top, #wohud .foot { display: flex; justify-content: space-between; align-items: center; gap: 10px; font-size: 12px; }
+  #wohud .top b { font-weight: 600; letter-spacing: .04em; }
+  #wohud .nums { display: flex; gap: 22px; margin: 8px 0; }
+  #wohud .nums b { display: block; font-size: 28px; font-weight: 300; }
+  #wohud .nums span { font-size: 10px; letter-spacing: .12em; text-transform: uppercase; opacity: .7; }
+  #wohud canvas { display: block; width: 100%; height: 56px; margin-bottom: 8px; }
+  #wohud .foot span:first-child { opacity: .8; }
+  @media (max-width: 1100px) { #wohud { bottom: auto; top: 110px; } }
+  #coachwin { position: fixed; left: 18px; top: 70px; width: 240px; height: 300px; border-radius: 4px; border: 1px solid rgba(255,255,255,.35);
+    box-shadow: 0 6px 24px rgba(0,0,0,.35); pointer-events: none; overflow: hidden; }
+  #coachcap { position: absolute; left: 0; right: 0; bottom: 0; padding: 18px 10px 8px; font-size: 11px; line-height: 1.35;
+    background: linear-gradient(transparent, rgba(0,0,0,.65)); text-shadow: 0 1px 3px rgba(0,0,0,.6); }
+  @media (max-width: 1100px) { #coachwin { left: auto; right: 18px; top: auto; bottom: 36px; width: 170px; height: 212px; } #coachcap { font-size: 10px; } }
+  .hr::after { content: '♥'; display: inline-block; color: #ff4d5a; font-size: .85em; margin-left: 6px; vertical-align: .05em; opacity: .45; }
+  .hr.live::after { opacity: 1; animation: beat var(--beat, 1s) ease-out infinite; }        /* beats at your heart rate */
+  @keyframes beat { 0% { transform: scale(1.3); } 30%, 100% { transform: scale(1); } }
+  @media (prefers-reduced-motion: reduce) { .hr.live::after { animation: none; } }
+  body.clean #hud, body.clean #ctl, body.clean #log, body.clean #credit, body.clean #wo, body.clean #wohud, body.clean #coachwin { display: none; }
   body.clean { cursor: none; }
   #credit { position: fixed; right: 14px; bottom: 10px; font-size: 10px; letter-spacing: .04em; opacity: .7; text-shadow: 0 1px 6px rgba(0,0,0,.7); max-width: 46vw; text-align: right; }
 </style>
@@ -52,9 +82,12 @@
 <canvas id="c"></canvas>
 <div id="hud">
   <div><b id="h-pw">220</b><span>watts</span></div>
+  <div id="h-cadbox" title="Cadence, when the trainer or power meter reports it"><b id="h-cad">–</b><span>rpm</span></div>
+  <div id="h-hrbox" hidden title="Heart rate, from a Bluetooth heart-rate monitor"><b id="h-hr" class="hr">–</b><span>bpm</span></div>
   <div><b id="h-sp">0.0</b><span>km/h</span></div>
   <div><b id="h-gr">0.0</b><span>gradient %</span></div>
   <div><b id="h-di">0.00</b><span>km</span></div>
+  <div><b id="h-ti">0:00</b><span>time</span></div>
 </div>
 <div id="ctl">
   <span>POWER</span>
@@ -65,15 +98,43 @@
   <button id="course" title="Switch between the invented valley and the real Leckhampton Hill loop">Course</button>
   <span id="wx"><button data-w="snow">Snow</button><button data-w="golden" class="on">Golden</button><button data-w="overcast">Overcast</button><button data-w="rain">Rain</button><button data-w="mist">Mist</button><button data-w="starry">Starry</button></span>
   <button id="bt">Connect trainer</button>
+  <button id="hrbtn" title="Connect a Bluetooth heart-rate monitor (chest strap or armband)">Heart rate</button>
   <span id="hills" title="How much of each hill a smart trainer makes you feel. Turn it down if the climbs are too hard; 0 % is flat."><button id="hless" aria-label="Make hills easier">−</button><span id="hval">Hills 50 %</span><button id="hmore" aria-label="Make hills harder">+</button></span>
   <button id="clean" title="Hide everything on screen (H key, or say “hide”). Press H, click, or say “show” to bring it back">Hide info</button>
+  <button id="wobtn" title="Ride a structured workout: power targets step by step">Workout</button>
   <button id="logbtn" title="Distance you have ridden, kept in this browser">Log</button>
 </div>
 <div id="log" hidden></div>
+<div id="wo" hidden></div>
+<div id="coachwin" hidden><div id="coachcap"></div></div>
+<div id="wohud" hidden>
+  <div class="top"><b id="wo-name"></b><span id="wo-left"></span></div>
+  <div class="nums">
+    <div><b id="wo-tgt">–</b><span>target W</span></div>
+    <div><b id="wo-pw">–</b><span>you, 3 s avg</span></div>
+    <div><b id="wo-step">–</b><span id="wo-steplbl">step</span></div>
+    <div id="wo-rpmbox"><b id="wo-rpm">–</b><span id="wo-rpmlbl">rpm</span></div>
+    <div id="wo-hrbox" hidden><b id="wo-hr" class="hr">–</b><span>bpm</span></div>
+  </div>
+  <canvas id="wo-prof"></canvas>
+  <div class="foot"><span id="wo-next"></span><span><button id="wo-skip">Skip step ›</button> <button id="wo-stop">Stop</button></span></div>
+</div>
 <div id="credit"></div>
 <div id="loading">Building the valley…</div>
 
-<script type="module">
+<script>
+// If the ride can't start (a file that won't load, no WebGL, a script error), say so on the loading screen
+// instead of leaving "Building…" up for ever. The first message wins: it is usually the most specific.
+window.rideFailed = msg => {
+  const l = document.getElementById('loading');
+  if (!l || l.dataset.failed) return;
+  l.dataset.failed = '1'; l.textContent = msg;
+  l.style.cssText += ';text-transform:none;letter-spacing:.04em;font-size:14px;padding:0 24px;text-align:center';
+};
+addEventListener('error', () => rideFailed('The ride could not start. Try reloading the page, or another browser.'));
+addEventListener('unhandledrejection', () => rideFailed('The ride could not start. Try reloading the page, or another browser.'));
+</script>
+<script type="module" onerror="rideFailed('The 3D engine did not load. Check the connection and reload the page.')">
 import * as THREE from 'three';
 import { Sky } from 'three/addons/objects/Sky.js';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
@@ -104,6 +165,7 @@ function ridged(x, y, o = 4) {       // sharp crests and gullies, for mountains
 }
 const smooth = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
 const canvas2d = (w, h) => { const c = document.createElement('canvas'); c.width = w; c.height = h; return [c, c.getContext('2d')]; };
+const addScript = src => new Promise((res, rej) => { const s = document.createElement('script'); s.src = src; s.onload = res; s.onerror = () => rej(new Error('missing ' + src)); document.head.append(s); });
 
 /* ---------- photo-scanned surfaces (Poly Haven, CC0) ---------- */
 const loadImg = src => new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = () => rej(new Error('missing texture')); i.src = src; });
@@ -112,8 +174,11 @@ const readable = img => { try { const [, g] = canvas2d(1, 1); g.drawImage(img, 0
 let imgs = await Promise.all(TEX.map(n => loadImg(`assets/${n}.jpg`))).catch(() => null);
 if (!imgs || !readable(imgs[0]) || location.search.includes('embedded')) {
   // Opened straight from disk, a browser won't let a page read image files. Use the embedded copies instead.
-  await new Promise((res, rej) => { const s = document.createElement('script'); s.src = 'assets/textures.js'; s.onload = res; s.onerror = () => rej(new Error('missing assets/textures.js')); document.head.append(s); });
-  imgs = await Promise.all(TEX.map(n => loadImg(window.RIDE_TEXTURES[n])));
+  // (The hosted site has no embedded copy, so there a failed texture means the page can't start.)
+  try {
+    await addScript('assets/textures.js');
+    imgs = await Promise.all(TEX.map(n => loadImg(window.RIDE_TEXTURES[n])));
+  } catch (err) { rideFailed('The road and grass textures did not load. Check the connection and reload the page.'); throw err; }
 }
 const [imgAsphalt, imgAsphaltN, imgGrass, imgGrassN, imgRock, imgGravel] = imgs;
 const imgTex = (img, srgb) => {
@@ -142,6 +207,7 @@ $('c').addEventListener('webglcontextlost', e => {
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(64, innerWidth / innerHeight, 0.05, 9000);
 scene.add(camera);
+const uPx = { value: innerHeight * Math.min(devicePixelRatio, 2) / (2 * Math.tan(0.6)) };      // metres to pixels at 1 m; kept up to date on resize
 
 /* ---------- sky, sun, haze ---------- */
 // ?theme=christmas: the same valley under snow at dusk, with lights in the trees and a few chalets
@@ -201,9 +267,9 @@ const SCENERY = new URLSearchParams(location.search).get('scenery');
 let real = null;
 if (COURSE !== 'valley') {
   $('loading').textContent = 'Building Leckhampton Hill…';
-  const addScript = src => new Promise((res, rej) => { const s = document.createElement('script'); s.src = src; s.onload = res; s.onerror = () => rej(new Error('missing ' + src)); document.head.append(s); });
   const DATA = 3;          // bump when the course files change, so browsers don't reuse an old copy
-  await addScript(`assets/${COURSE}.js?v=${DATA}`);
+  try { await addScript(`assets/${COURSE}.js?v=${DATA}`); }
+  catch (err) { rideFailed('The Leckhampton course did not load. Check the connection and reload the page.'); throw err; }
   await addScript(`assets/${COURSE}_osm.js?v=${DATA}`).catch(() => {});          // buildings, woods and hedges are optional
   real = window.RIDE_COURSES[COURSE];
   real.osm = real.osm || { buildings: [], trees: [], lines: [], woods: '', credit: '' };
@@ -752,7 +818,7 @@ if (XMAS) {
   smokeAt.forEach((p, k) => { for (let i = 0; i < PUFFS; i++) { sp.set(p, (k * PUFFS + i) * 3); ph[k * PUFFS + i] = rnd(); } });
   const sg = new THREE.BufferGeometry(); sg.setAttribute('position', new THREE.BufferAttribute(sp, 3)); sg.setAttribute('aPh', new THREE.BufferAttribute(ph, 1));
   const smoke = new THREE.Points(sg, new THREE.ShaderMaterial({
-    transparent: true, depthWrite: false, uniforms: { uTime, uPx: { value: innerHeight * Math.min(devicePixelRatio, 2) / (2 * Math.tan(0.6)) }, uCol: { value: new V3(0.5, 0.52, 0.6) } },
+    transparent: true, depthWrite: false, uniforms: { uTime, uPx, uCol: { value: new V3(0.5, 0.52, 0.6) } },
     vertexShader: `uniform float uTime, uPx; attribute float aPh; varying float vA;
       void main(){
         float age = fract(uTime * 0.07 + aPh);
@@ -898,7 +964,7 @@ if (xl.p.length) {         // every Christmas light is one glowing point; bright
   g.setAttribute('position', new THREE.Float32BufferAttribute(xl.p, 3)); g.setAttribute('aCol', new THREE.Float32BufferAttribute(xl.c, 3)); g.setAttribute('aPh', new THREE.BufferAttribute(ph, 1));
   const lights = new THREE.Points(g, new THREE.ShaderMaterial({
     transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
-    uniforms: { uTime, uPx: { value: innerHeight * Math.min(devicePixelRatio, 2) / (2 * Math.tan(0.6)) } },
+    uniforms: { uTime, uPx },
     vertexShader: `uniform float uTime, uPx; attribute vec3 aCol; attribute float aPh; varying vec3 vCol;
       void main(){
         vec4 mv = viewMatrix * vec4(position, 1.); gl_Position = projectionMatrix * mv;
@@ -1021,7 +1087,6 @@ const uLid = { value: 0 }, uCloudLit = { value: new V3() }, uCloudDark = { value
 }
 
 /* ---------- smoke from the quarry workings on the scarp (real courses) ---------- */
-const uPx = { value: innerHeight * Math.min(devicePixelRatio, 2) / (2 * Math.tan(0.6)) };      // metres to pixels at 1 m
 if (real && real.quarry) {
   const [qx, qz] = real.quarry, cands = [], src = [];
   for (let n = 0; n < 400; n++) {
@@ -1232,6 +1297,7 @@ function drawHeadUnit(kmh, w) {
 
 /* ---------- lens ---------- */
 const composer = new EffectComposer(renderer, new THREE.WebGLRenderTarget(innerWidth, innerHeight, { type: THREE.HalfFloatType, samples: 4 }));
+composer.setSize(innerWidth, innerHeight);      // size its buffers for the screen's pixel ratio now, as a window resize would, so the first view is as sharp as later ones
 composer.addPass(new RenderPass(scene, camera));
 const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.22, 0.6, 3.5);
 composer.addPass(bloom);
@@ -1317,13 +1383,14 @@ addEventListener('resize', () => {
 
 /* ---------- input: keys, slider, smart trainer ---------- */
 const START = real ? 850 : 0;          // Leckhampton: begin on the lane about 150 m below where the hill steepens, not out in the vale
-const st = { s: START, v: 6, power: 220, target: 220, dist: 0, trainer: false };
+const st = { s: START, v: 6, power: 220, target: 220, dist: 0, time: 0, trainer: false };
 window.ride = st; st.haze = hazeCol; st.built = st0;
 st.goNear = (x, z) => { let b = 0, bd = 1e12; for (let i = 0; i < N; i++) { const d = (P[i].x - x) ** 2 + (P[i].z - z) ** 2; if (d < bd) { bd = d; b = i; } } st.s = Math.max(0, b * LEN / N - 60); return Math.round(Math.sqrt(bd)); };   // for checking: ride to the road nearest a point
 st.weather = (n, i) => setWeather(n, i);
 const skip = m => { st.s = (((st.s + m) % LEN) + LEN) % LEN; };
 const setTarget = w => { st.target = Math.min(900, Math.max(0, w)); $('pwr').value = st.target; };
 addEventListener('keydown', e => {
+  if (e.target === $('pwr') && e.key.startsWith('Arrow')) e.preventDefault();     // the arrows mean the same with the slider focused: no extra slider step
   if (e.key === 'ArrowUp') setTarget(st.target + 10);
   if (e.key === 'ArrowDown') setTarget(st.target - 10);
   if (e.key === 'ArrowRight') skip(250);
@@ -1340,8 +1407,14 @@ addEventListener('keydown', e => { if ((e.key === 'h' || e.key === 'H') && !e.me
 $('skip').addEventListener('click', () => skip(250));
 /* Smart trainer. Power is read from the Cycling Power service. If the trainer also has the Fitness Machine
    Service (FTMS), the game takes control of it and sends the road gradient, so climbs feel harder on the bike.
-   Without FTMS, or if the trainer refuses control, it stays power only. */
+   Bkool trainers without FTMS (the Smart Pro 3, sold by Zycle as the Smart ZPro) take ANT+ FE-C data pages, bare,
+   on a Bkool characteristic instead: the format comes from a recording of Kinomap driving one.
+   Without either, or if the trainer refuses control, it stays power only. */
 const FTMS = 0x1826, FTMS_POINT = 0x2AD9;          // service, and its Fitness Machine Control Point
+const BKOOL = 'f03eee01-4910-473c-be46-960948c2f59c', BKOOL_CMD = 'f03ee002-4910-473c-be46-960948c2f59c', BKOOL_DATA = 'f03ee006-4910-473c-be46-960948c2f59c';
+// FE-C page 51 (track resistance) as Kinomap sends it: byte 1 is 0x6f rather than the standard 0xff; grade in 0.01 % from −200 %
+const bkoolGrade = g => { const v = Math.round((g + 200) / 0.01); return Uint8Array.from([0x33, 0x6f, 0xff, 0xff, 0xff, v & 255, v >> 8, 0x00]); };
+const OP_POWER = 0x05;                               // FTMS: Set Target Power, sint16 watts
 const OP_CONTROL = 0x00, OP_SIM = 0x11, OP_REPLY = 0x80, OP_OK = 0x01;
 const bike = { dev: null, known: null, point: null, busy: false, sent: 0, at: 0, fails: 0, timer: 0, tries: 0 };
 // How much of the road's gradient the trainer is asked to feel. Half by default, like most indoor games,
@@ -1353,9 +1426,9 @@ let HILLS = (() => {
   if (q !== null && q !== '' && isFinite(+q)) n = +q;
   return Math.max(0, Math.min(100, n)) / 100;
 })();
-const setHills = pct => {
+const setHills = (pct, keep = true) => {          // keep: remember it in this browser (not for a one-visit ?hills=)
   HILLS = Math.max(0, Math.min(100, Math.round(pct / 10) * 10)) / 100;
-  try { localStorage.setItem(HILLS_KEY, String(Math.round(HILLS * 100))); } catch {}
+  if (keep) try { localStorage.setItem(HILLS_KEY, String(Math.round(HILLS * 100))); } catch {}
   $('hval').textContent = HILLS ? 'Hills ' + Math.round(HILLS * 100) + ' %' : 'Hills off';
   bike.at = 0;                                      // tell the trainer straight away
 };
@@ -1395,12 +1468,35 @@ function simParams(gradePct) {
 }
 
 // about once a second, or sooner when the gradient has moved by more than 0.5 %
+// In a workout step with a power target (and ERG on), the trainer is asked to hold that power instead.
+// The Bkool does not hold a power when asked to (FE-C page 49 made it lighter, not heavier), but it does follow the
+// gradient. So hold the power through the gradient: with the rider and bike weight it was given, and no wind or rolling
+// resistance, power = mass × g × speed × slope. The trainer reports its speed every 2 s; a slow correction from the power
+// you actually make covers the trainer's own losses.
+function ergGrade(target) {
+  const v = Math.max(3, bike.speed || 0), wPerPct = MASS * 9.81 * v / 100;         // watts for each 1 % of slope at this speed
+  const now = performance.now(), dt = Math.min(2, (now - (bike.ergAt || now)) / 1000); bike.ergAt = now;
+  if (st.power > 20 && performance.now() - (bike.ergSince || 0) > 4000)            // not while the trainer is still reacting to a new target
+    bike.ergI = Math.max(-6, Math.min(6, (bike.ergI || 0) + (target - wo.avg) / wPerPct * 0.3 * dt));
+  return Math.max(-5, Math.min(20, target / wPerPct + (bike.ergI || 0)));
+}
 async function sendGrade() {
-  const now = performance.now(), g = Math.max(-20, Math.min(20, grade)) * (grade > 0 ? HILLS : HILLS * 0.5), wait = now - bike.at;
-  if (!bike.point || bike.busy || wait < 250 || (wait < 1000 && Math.abs(g - bike.sent) <= 0.5)) return;
+  const now = performance.now(), wait = now - bike.at, watts = workoutWatts(), road = workoutGrade() ?? grade;
+  let mode = watts === null ? 'sim' : 'erg', val;
+  if (mode === 'erg' && bike.kind === 'bkool') {                                     // a power target, held through the gradient
+    mode = 'erg-slope';
+    if (watts !== bike.ergTarget) { bike.ergTarget = watts; bike.ergSince = now; }
+    val = ergGrade(watts);
+  } else val = mode === 'erg' ? watts : Math.max(-20, Math.min(20, road)) * (road > 0 ? HILLS : HILLS * 0.5);
+  if (!bike.point || bike.busy || wait < 250) return;
+  if (mode === bike.mode && wait < 1000 && Math.abs(val - bike.sent) <= (mode === 'erg' ? 1 : mode === 'erg-slope' ? 0.15 : 0.5)) return;
   bike.busy = true; bike.at = now;
   const point = bike.point;
-  try { await point.writeValueWithResponse(simParams(g)); bike.sent = g; bike.fails = 0; }
+  try {
+    if (bike.kind === 'bkool') await point.writeValueWithoutResponse(bkoolGrade(val));
+    else await point.writeValueWithResponse(mode === 'erg' ? Uint8Array.from([OP_POWER, val & 255, (val >> 8) & 255]) : simParams(val));
+    bike.sent = val; bike.mode = mode; bike.fails = 0;
+  }
   catch (err) {
     // three misses in a row: give up on gradient and carry on with power only
     if (bike.point === point && ++bike.fails >= 3) { bike.point = null; clearInterval(bike.timer); btLabel(); }
@@ -1408,34 +1504,102 @@ async function sendGrade() {
   bike.busy = false;
 }
 
+// take control of the trainer's resistance: FTMS if it has it, otherwise Bkool's own channel, otherwise power only
 async function ftmsStart(server) {
+  clearInterval(bike.timer);
+  let point = null, kind = null;
   try {
-    const point = await (await server.getPrimaryService(FTMS)).getCharacteristic(FTMS_POINT);
+    point = await (await server.getPrimaryService(FTMS)).getCharacteristic(FTMS_POINT);
     await point.startNotifications();
     await ftmsAsk(point, [OP_CONTROL]);
-    Object.assign(bike, { point, busy: false, sent: 0, at: 0, fails: 0 });
-    bike.timer = setInterval(sendGrade, 250);
-  } catch (err) { bike.point = null; }                     // no FTMS, or control not given: power only
+    kind = 'ftms';
+  } catch (err) {}
+  if (!kind) try {
+    point = await (await server.getPrimaryService(BKOOL)).getCharacteristic(BKOOL_CMD);
+    const kg = Math.round(RIDER_KG * 100), bk = Math.round(BIKE_KG / 0.05);            // rider in 0.01 kg, bike in 0.05 kg
+    await point.writeValueWithoutResponse(Uint8Array.from([0x37, kg & 255, kg >> 8, 0xff, ((bk & 15) << 4) | 0x08, bk >> 4, 0xff, 0xff]));   // page 55: rider and bike weight
+    await point.writeValueWithoutResponse(Uint8Array.from([0x32, 0x6f, 0xff, 0xff, 0xff, 0x00, 0x7f, 0x64]));          // page 50: no wind
+    kind = 'bkool';
+    try {                                                   // Bkool's own data, every 2 s: power, speed, and cadence in byte 4 (rpm)
+      const data = await (await server.getPrimaryService(BKOOL)).getCharacteristic(BKOOL_DATA);
+      await data.startNotifications();
+      data.addEventListener('characteristicvaluechanged', e => {
+        const d = e.target.value; if (d.byteLength < 5) return;
+        setCadence(d.getUint8(4));
+        bike.speed = d.getUint16(2, true) / 100 / 3.6;      // bytes 2-3: the trainer's speed in 0.01 km/h, here in m/s
+      });
+    } catch (err) {}                                        // no cadence, but the trainer still works
+  } catch (err) {}
+  if (!kind) { bike.point = null; return; }                // no way to control it: power only
+  Object.assign(bike, { point, kind, busy: false, sent: 0, at: 0, fails: 0 });
+  bike.timer = setInterval(sendGrade, 250);
 }
 
 // give up on a slow Bluetooth step instead of hanging on it
 const within = (p, ms) => new Promise((ok, no) => { const t = setTimeout(() => no(new Error('timed out')), ms); p.then(v => { clearTimeout(t); ok(v); }, e => { clearTimeout(t); no(e); }); });
 const watched = new WeakSet();
 
+// Power comes from the Cycling Power service; a trainer that only has FTMS reports it in Indoor Bike Data instead.
+const FTMS_BIKE = 0x2AD2;
+function ftmsPower(d) {              // Indoor Bike Data: flags, then only the fields the flags say are present, in this order
+  if (d.byteLength < 2) return null;
+  const f = d.getUint16(0, true);
+  if (!(f & 0x40)) return null;                                     // no instantaneous power in this message
+  let o = 2;
+  if (!(f & 0x01)) o += 2;                                          // instantaneous speed (present when bit 0 is clear)
+  for (const [bit, size] of [[0x02, 2], [0x04, 2], [0x08, 2], [0x10, 3], [0x20, 2]]) if (f & bit) o += size;   // avg speed, cadence, avg cadence, distance, resistance
+  return o + 2 <= d.byteLength ? d.getInt16(o, true) : null;
+}
+// Cadence, when the trainer or power meter reports it: FTMS gives rpm directly, Cycling Power gives a crank
+// revolution count and the time of the last one, so cadence comes from the change between messages.
+const setCadence = rpm => { st.cad = Math.round(Math.max(0, Math.min(250, rpm))); st.cadAt = performance.now(); };
+function cadenceNow() { return st.cad == null ? null : performance.now() - st.cadAt > 5000 ? 0 : st.cad; }   // nothing new for 5 s: stopped
+function ftmsCadence(d) {
+  if (d.byteLength < 2) return;
+  const f = d.getUint16(0, true);
+  if (!(f & 0x04)) return;                                           // no instantaneous cadence in this message
+  const o = 2 + (f & 0x01 ? 0 : 2) + (f & 0x02 ? 2 : 0);              // after instantaneous and average speed
+  if (o + 2 <= d.byteLength) setCadence(d.getUint16(o, true) / 2);    // 0.5 rpm units
+}
+const crank = { revs: null, time: 0, at: 0 };
+function cpsCadence(d) {
+  const f = d.getUint16(0, true);
+  if (!(f & 0x20)) return;                                           // no crank revolution data
+  let o = 4;
+  if (f & 0x01) o += 1; if (f & 0x04) o += 2; if (f & 0x10) o += 6;   // pedal balance, torque, wheel revolutions come first
+  if (o + 4 > d.byteLength) return;
+  const revs = d.getUint16(o, true), time = d.getUint16(o + 2, true), now = performance.now();
+  if (crank.revs !== null) {
+    const dr = (revs - crank.revs + 65536) % 65536, dt = ((time - crank.time + 65536) % 65536) / 1024;
+    if (dr > 0 && dr < 50 && dt > 0) setCadence(dr / dt * 60);
+    else if (st.cad && now - crank.at > 3000) setCadence(0);        // no pedal stroke for 3 s: stopped
+  }
+  if (crank.revs === null || revs !== crank.revs) Object.assign(crank, { revs, time, at: now });
+}
+async function readPower(server) {
+  let ch = null;
+  try { ch = await (await server.getPrimaryService('cycling_power')).getCharacteristic('cycling_power_measurement'); } catch {}
+  if (ch) {
+    await ch.startNotifications();
+    ch.addEventListener('characteristicvaluechanged', e => { st.trainer = true; setTarget(e.target.value.getInt16(2, true)); cpsCadence(e.target.value); });
+    return;
+  }
+  ch = await (await server.getPrimaryService(FTMS)).getCharacteristic(FTMS_BIKE);
+  await ch.startNotifications();
+  ch.addEventListener('characteristicvaluechanged', e => { const w = ftmsPower(e.target.value); ftmsCadence(e.target.value); if (w !== null) { st.trainer = true; setTarget(w); } });
+}
+
 // connect to one trainer and start reading its power (and sending gradient, if it allows)
 async function useTrainer(dev) {
   let server;
-  try { server = await within(dev.gatt.connect(), 8000); }
-  catch (err) { try { dev.gatt.disconnect(); } catch {} throw err; }
-  const svc = await server.getPrimaryService('cycling_power');
-  const ch = await svc.getCharacteristic('cycling_power_measurement');
-  await ch.startNotifications();
-  ch.addEventListener('characteristicvaluechanged', e => { st.trainer = true; setTarget(e.target.value.getInt16(2, true)); });
+  try { server = await within(dev.gatt.connect(), 8000); await readPower(server); }
+  catch (err) { try { dev.gatt.disconnect(); } catch {} throw err; }      // don't leave a half-set-up trainer connected
   if (!watched.has(dev)) {
     watched.add(dev);
     dev.addEventListener('gattserverdisconnected', () => {
+      const wasInUse = bike.dev === dev;            // not a trainer we dropped ourselves because it failed to set up
       st.trainer = false; clearInterval(bike.timer); bike.dev = bike.point = null; btLabel();
-      rejoin(dev);
+      if (wasInUse) rejoin(dev);
     });
   }
   bike.dev = bike.known = dev; bike.tries = 0; $('bt').title = dev.name || '';
@@ -1477,7 +1641,7 @@ $('bt').addEventListener('click', async () => {
     }
     // nothing remembered, or it did not answer: show the browser's list of trainers nearby
     btLabel();
-    const dev = await navigator.bluetooth.requestDevice({ filters: [{ services: ['cycling_power'] }, { services: [FTMS] }], optionalServices: ['cycling_power', FTMS] });
+    const dev = await navigator.bluetooth.requestDevice({ filters: [{ services: ['cycling_power'] }, { services: [FTMS] }], optionalServices: ['cycling_power', FTMS, BKOOL] });
     $('bt').textContent = 'Connecting…';
     if (bike.dev && bike.dev !== dev) { const old = bike.dev; bike.known = dev; try { old.gatt.disconnect(); } catch {} }
     await useTrainer(dev);
@@ -1485,7 +1649,69 @@ $('bt').addEventListener('click', async () => {
   finally { bike.busyJoin = false; }
 });
 btLabel();
-setHills(HILLS * 100);
+setHills(HILLS * 100, false);
+
+/* ---------- heart-rate monitor: the standard Bluetooth Heart Rate service, any chest strap or armband ---------- */
+const HR_KEY = 'golden-hour-ride-hrm';                // the last monitor used: { id, name }, kept in this browser
+const hrm = { dev: null, bpm: null, at: 0, busy: false, tries: 0 };
+function hrNow() { return hrm.bpm == null || performance.now() - hrm.at > 5000 ? null : hrm.bpm; }   // nothing for 5 s: no reading
+function showHr(el, hr) {                              // the number, and a heart that beats at that rate (faded with no reading)
+  el.textContent = hr === null ? '–' : hr;
+  el.classList.toggle('live', hr !== null);
+  if (hr !== null) el.style.setProperty('--beat', (60 / hr).toFixed(2) + 's');
+}
+const hrLabel = t => { $('hrbtn').textContent = t || (hrm.dev ? 'Heart rate: on' : 'Heart rate'); $('hrbtn').classList.toggle('on', !!hrm.dev); };
+function hrParse(d) {                                  // flags, then the rate as one byte, or two when bit 0 is set
+  if (d.byteLength < 2) return;
+  const bpm = d.getUint8(0) & 1 ? (d.byteLength >= 3 ? d.getUint16(1, true) : 0) : d.getUint8(1);
+  if (bpm > 0 && bpm < 250) { hrm.bpm = bpm; hrm.at = performance.now(); }
+}
+async function useHrm(dev) {
+  let server;
+  try {
+    server = await within(dev.gatt.connect(), 8000);
+    const ch = await (await server.getPrimaryService('heart_rate')).getCharacteristic('heart_rate_measurement');
+    await ch.startNotifications();
+    ch.addEventListener('characteristicvaluechanged', e => hrParse(e.target.value));
+  } catch (err) { try { dev.gatt.disconnect(); } catch {} throw err; }
+  if (!dev._hrWatched) {
+    dev._hrWatched = true;
+    dev.addEventListener('gattserverdisconnected', async () => {     // dropped out: try again a few times
+      const was = hrm.dev === dev; hrm.dev = null; hrLabel();
+      if (!was) return;
+      for (hrm.tries = 0; hrm.tries < 5 && !hrm.dev; hrm.tries++) {
+        hrLabel('Heart rate: reconnecting…');
+        await new Promise(r => setTimeout(r, 3000));
+        try { await useHrm(dev); } catch (err) {}
+      }
+      hrLabel();
+    });
+  }
+  hrm.dev = dev; hrm.tries = 99;
+  try { localStorage.setItem(HR_KEY, JSON.stringify({ id: dev.id, name: dev.name || '' })); } catch {}
+  $('hrbtn').title = dev.name || ''; hrLabel();
+}
+$('hrbtn').addEventListener('click', async () => {
+  if (!navigator.bluetooth) { hrLabel('Needs Chrome or Edge'); return; }
+  if (hrm.busy) return;
+  if (hrm.dev) { const d = hrm.dev; hrm.dev = null; hrm.tries = 99; try { d.gatt.disconnect(); } catch {} hrm.bpm = null; hrLabel(); return; }   // a second click disconnects
+  hrm.busy = true;
+  try {
+    let last = null; try { last = JSON.parse(localStorage.getItem(HR_KEY)); } catch {}
+    if (last && navigator.bluetooth.getDevices) {    // the remembered monitor, without the browser's list
+      for (const d of await navigator.bluetooth.getDevices().catch(() => [])) {
+        if (d.id !== last.id) continue;
+        hrLabel('Heart rate: connecting…');
+        try { await useHrm(d); return; } catch (err) {}
+      }
+    }
+    hrLabel();
+    const dev = await navigator.bluetooth.requestDevice({ filters: [{ services: ['heart_rate'] }] });
+    hrLabel('Heart rate: connecting…');
+    await useHrm(dev);
+  } catch (err) { hrLabel(); }
+  finally { hrm.busy = false; }
+});
 
 /* ---------- ride log: distance ridden, kept in this browser (localStorage) ---------- */
 {
@@ -1515,11 +1741,491 @@ setHills(HILLS * 100);
       (all.length ? `<button id="logclear">Clear log</button>` : '');
     const c = $('logclear'); if (c) c.onclick = () => { if (confirm('Delete the whole ride log from this browser?')) { try { localStorage.removeItem(KEY); } catch {} st.dist = 0; ride.s = 0; draw(); } };
   };
-  btn.onclick = () => { box.hidden = !box.hidden; btn.classList.toggle('on', !box.hidden); if (!box.hidden) draw(); };
+  btn.onclick = () => {
+    box.hidden = !box.hidden; btn.classList.toggle('on', !box.hidden); if (!box.hidden) draw();
+    if (!box.hidden) { $('wo').hidden = true; $('wobtn').classList.remove('on'); }        // one panel at a time
+  };
   setInterval(() => { save(); if (!box.hidden) draw(); }, 5000);
   addEventListener('pagehide', save);
   document.addEventListener('visibilitychange', save);
 }
+
+/* ---------- workouts: power targets step by step, read from MyWhoosh workout files ----------
+   Each step holds a power (a fraction of FTP), ramps between two, sets a gradient, or is free riding.
+   With ERG on and a trainer under control, the trainer holds the target power; otherwise it follows the road. */
+const WO_KEY = 'golden-hour-ride-workouts', FTP_KEY = 'golden-hour-ride-ftp', ERG_KEY = 'golden-hour-ride-erg';
+const keep = { get: (k, d) => { try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch { return d; } },
+               set: (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch { return false; } } };
+const ZONES = [[0.55, '#aeb8c2'], [0.75, '#2d91d2'], [0.90, '#4cbd78'], [1.05, '#f5c933'], [1.20, '#f26b3a'], [99, '#c8201e']];
+const zoneOf = f => ZONES.findIndex(z => f <= z[0] + 1e-6);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+const mmss = s => { s = Math.max(0, Math.round(s)); const h = Math.floor(s / 3600), m = Math.floor(s / 60) % 60, x = s % 60; return (h ? h + ':' + String(m).padStart(2, '0') : m) + ':' + String(x).padStart(2, '0'); };
+const HRMAX_KEY = 'golden-hour-ride-hrmax';
+const wo = { builtIn: [], hrmax: +keep.get(HRMAX_KEY, 168) || 168, list: keep.get(WO_KEY, []), ftp: +keep.get(FTP_KEY, 200) || 200, erg: keep.get(ERG_KEY, true) !== false, run: null, avg: 0, msg: '', doneAt: 0 };
+
+function fromMyWhoosh(j) {
+  const a = j && j.WorkoutStepsArray;
+  if (!Array.isArray(a) || !a.length) throw new Error('no WorkoutStepsArray');
+  return { name: String(j.Name || 'Workout').slice(0, 80), steps: a.map(s => {
+    const dur = Math.max(1, +s.Time || 0), rpm = +s.Rpm || 0;
+    const kind = s.StepType === 'E_WarmUp' ? 'Warm up' : s.StepType === 'E_CoolDown' ? 'Cool down' : undefined;
+    if (s.IsManualGrade) return { dur, rpm, kind: 'Climb', grade: +s.ManualGradeValue || 0 };
+    if (+s.Power > 0) return { dur, rpm, kind, from: +s.Power, to: +s.Power };
+    if (+s.StartPower > 0 || +s.EndPower > 0) return { dur, rpm, kind, from: +s.StartPower || 0, to: +s.EndPower || 0 };
+    return { dur, rpm, kind: 'Free ride' };
+  }) };
+}
+/* Coach: a workout can have a spoken coach, in workouts/<name>.coach.json: lines timed within each step that explain it and
+   keep you going, and short remarks for when you ride too hard, too easy, or off the cadence. The clips are spoken ahead of
+   time by tools/build_coach_audio.py (pocket-tts) into workouts/audio/<name>/; a line without a clip is read by the browser. */
+const COACH_KEY = 'golden-hour-ride-coach', LANGS = { english: 'en-GB', german: 'de-DE', spanish: 'es-ES', french: 'fr-FR', italian: 'it-IT', portuguese: 'pt-PT', dutch: 'nl-NL' };
+async function loadCoach(base) {
+  try {
+    const c = await (await fetch(`workouts/${encodeURIComponent(base)}.coach.json`, { cache: 'no-cache' })).json();
+    const man = await fetch(`workouts/audio/${encodeURIComponent(base)}/manifest.json`, { cache: 'no-cache' }).then(r => r.json()).catch(() => ({ clips: {} }));
+    c.rules = Object.assign({ after_seconds_off: 8, min_gap: 30, quiet_after_step_start: 15, cadence_tolerance: 8, praise_after: 120 }, c.rules);
+    c.byStep = []; for (const s of c.steps || []) c.byStep[s.step - 1] = s.cues || [];
+    c.clips = man.clips || {}; c.dir = `workouts/audio/${encodeURIComponent(base)}/`; c.lang = LANGS[c.language] || 'en-GB';
+    if (man.numbers) {                                    // spoken numbers for the check-ins, shared by every workout with this voice
+      const dir = `workouts/audio/${encodeURIComponent(man.numbers)}/`;
+      c.nums = await fetch(dir + 'manifest.json', { cache: 'no-cache' }).then(r => r.json()).then(m => ({ dir, clips: m.clips || {} })).catch(() => null);
+    }
+    return c;
+  } catch (err) { return null; }                         // no coach for this workout
+}
+const coach = { on: keep.get(COACH_KEY, true) !== false, busy: false, last: -1e9, queue: [], el: null, duck: 1 };
+function coachStop() {
+  coach.queue.length = 0; coach.busy = false; coach.duck = 1; coachFig.line(null);
+  if (coach.el) { coach.el.onended = coach.el.onerror = null; coach.el.pause(); coach.el = null; }
+  try { speechSynthesis.cancel(); } catch {}
+}
+function coachSay(c, line, important) {                   // timed lines wait their turn; remarks are dropped if the coach is busy
+  if (!coach.on || !c || !line) return;
+  if (!important && (coach.busy || coach.queue.length)) return;
+  coach.queue.push([c, line]);
+  if (!coach.busy) coachNext();
+}
+function coachNext() {
+  const item = coach.queue.shift();
+  if (!item) { coach.busy = false; coach.duck = 1; coachFig.line(null); return; }
+  const [c, line] = item;
+  coachFig.line(line);                                    // caption, and a fist pump for a lively line
+  coach.busy = true; coach.duck = 0.35;                   // the wind and tyres go quiet while the coach speaks
+  let over = false;
+  const done = () => { if (over) return; over = true; coach.el = null; coach.last = performance.now() / 1000; coachNext(); };
+  const speak = () => {
+    if (!window.speechSynthesis) return done();
+    const u = new SpeechSynthesisUtterance(line.text); u.lang = c.lang; u.onend = u.onerror = done; speechSynthesis.speak(u);
+  };
+  // a line is one clip, or (a check-in) several played back to back: phrase, number, unit, verdict
+  const urls = (line.parts || [{ id: line.id }]).map(p => {
+    if (p.n != null) { const k = c.nums && c.nums.clips['n' + p.n]; return k ? c.nums.dir + k.file : null; }
+    const k = c.clips[p.id]; return k ? c.dir + k.file : null;
+  });
+  if (urls.some(u => !u)) return speak();                 // anything missing: the browser reads the whole line instead
+  let i = 0, fellBack = false;
+  const fallback = () => { if (!over && !fellBack) { fellBack = true; speak(); } };
+  const playNext = () => {
+    if (over || fellBack) return;
+    if (i >= urls.length) return done();
+    const a = new Audio(urls[i++]); coach.el = a; coachFig.listen(a);
+    a.onended = playNext; a.onerror = fallback;
+    a.play().catch(() => { if (coach.el === a) fallback(); });
+  };
+  playNext();
+}
+// Check-ins: every few minutes, the coach reads out your heart rate, or your power and cadence, and says how it looks.
+const numClip = n => n <= 220 ? Math.round(n) : Math.round(n / 5) * 5;            // the spoken numbers: exact to 220, then in fives
+function hrCeiling(f) { return f == null ? 0.85 : f < 0.55 ? 0.70 : f < 0.75 ? 0.80 : f < 0.90 ? 0.88 : f < 1.05 ? 0.93 : 1.0; }   // share of max HR to expect
+function checkinLine(c, kind, r) {
+  const K = c.checkins, U = K.units || {}, P = K[kind] || {}, intro = pick(P.intro, r.lastChk), parts = [], words = [];
+  if (!intro) return null;
+  const add = (part, text) => { parts.push(part); words.push(text); };
+  add({ id: intro.id }, intro.text);
+  let verdict;
+  if (kind === 'heart_rate') {
+    const hr = Math.round(hrNow()), share = hr / wo.hrmax, top = hrCeiling(fracNow());
+    add({ n: numClip(hr) }, String(hr)); add({ id: 'unit-bpm' }, U.bpm || 'beats per minute.');
+    verdict = pick(P[share <= top ? 'good' : share <= top + 0.04 ? 'high' : 'too_high']);
+  } else {
+    const w = Math.round(wo.avg), cad = cadenceNow(), tgt = targetNow(), tol = tgt === null ? 0 : Math.max(10, tgt * 0.05);
+    add({ n: numClip(w) }, String(numClip(w)));
+    if (cad) { add({ id: 'unit-watts_and' }, U.watts_and || 'watts, and'); add({ n: numClip(cad) }, String(cad)); add({ id: 'unit-rpm' }, U.rpm || 'r p m.'); }
+    else add({ id: 'unit-watts' }, U.watts || 'watts.');
+    verdict = pick(P[tgt === null || Math.abs(w - tgt) <= tol ? 'good' : w > tgt ? 'high' : 'low'] || P.good);
+  }
+  if (verdict) add({ id: verdict.id }, verdict.text);
+  r.lastChk = intro.id;
+  return { id: 'checkin', parts, text: words.join(' ') };
+}
+function checkinTick(c, r, s, dt) {
+  const K = c.checkins;
+  if (!K || r.paused) return;
+  r.chkClock = (r.chkClock || 0) + dt;
+  if (r.chkClock < (r.nextChk ?? K.first_after ?? 150)) return;
+  const now = performance.now() / 1000, soon = (c.byStep[r.i] || []).some(l => {   // never just before one of the step's own lines
+    const at = l.at != null ? l.at : s.dur - (l.before_end || 0); return !r.said.has(l.id) && at - r.st < 25;
+  });
+  if (coach.busy || coach.queue.length || now - coach.last < 10 || r.st < c.rules.quiet_after_step_start || s.dur - r.st < 25 || soon) return;   // wait for a quiet moment
+  const hrTurn = r.chkTurn % 2 === 0 && hrNow() !== null && K.heart_rate;
+  const kind = hrTurn ? 'heart_rate' : st.power >= 10 && K.power ? 'power' : null;
+  r.chkTurn++; r.nextChk = r.chkClock + (K.every || 240);
+  if (kind) coachSay(c, checkinLine(c, kind, r), false);
+}
+const pick = (pool, last) => { const p = (pool || []).filter(l => l.id !== last); return p.length ? p[Math.floor(Math.random() * p.length)] : (pool || [])[0]; };
+function coachTick(dt) {
+  const r = wo.run, c = r && r.w.coach;
+  if (!c || !coach.on) return;
+  const s = r.w.steps[r.i], R = c.rules;
+  for (const line of c.byStep[r.i] || []) {                // the step's own lines, each once, when their moment comes
+    if (r.said.has(line.id)) continue;
+    const at = line.at != null ? line.at : s.dur - (line.before_end || 0);
+    if (r.st >= at) { r.said.add(line.id); if (r.st < at + 20) coachSay(c, line, true); }   // skipped far past it: let it go
+  }
+  // remarks: only after being off for a while, not right after a step starts, and not too often
+  let kind = null;
+  const tgt = targetNow(), cad = cadenceNow();
+  if (tgt !== null && !r.paused) { const d = wo.avg - tgt, tol = Math.max(10, tgt * 0.05); kind = d > tol ? 'power_high' : d < -tol ? 'power_low' : null; }
+  if (!kind && s.rpm && cad) kind = cad > s.rpm + R.cadence_tolerance ? 'cadence_high' : cad < s.rpm - R.cadence_tolerance ? 'cadence_low' : null;
+  r.offFor = kind && kind === r.offKind ? r.offFor + dt : 0; r.offKind = kind;
+  r.onFor = !kind && tgt !== null && !r.paused ? r.onFor + dt : 0;
+  const now = performance.now() / 1000, calm = r.st >= R.quiet_after_step_start && now - coach.last >= R.min_gap;
+  if (kind && r.offFor >= R.after_seconds_off && calm) { const l = pick(c.feedback?.[kind], r.lastRemark); r.lastRemark = l?.id; coachSay(c, l, false); r.offFor = 0; }
+  else if (r.onFor >= R.praise_after && calm && r.praised !== r.i && s.from >= 0.75) {        // praise: once a step, and only in the efforts
+    const l = pick(c.feedback?.on_target, r.lastRemark); r.lastRemark = l?.id; coachSay(c, l, false); r.onFor = 0; r.praised = r.i;
+  }
+  checkinTick(c, r, s, dt);
+}
+
+// The workouts that come with the ride: MyWhoosh files in workouts/, named in workouts/index.json (a web server can't list a folder).
+async function loadBuiltInWorkouts() {
+  try {
+    const names = await (await fetch('workouts/index.json', { cache: 'no-cache' })).json();
+    const got = await Promise.all(names.map(n => fetch('workouts/' + encodeURIComponent(n), { cache: 'no-cache' })
+      .then(r => r.json()).then(async j => Object.assign(fromMyWhoosh(j), { builtIn: true, coach: await loadCoach(n.replace(/\.json$/, '')) })).catch(() => null)));
+    wo.builtIn = got.filter(Boolean);
+  } catch (err) { wo.builtIn = []; }                     // opened straight from disk, or the folder is missing: only your own workouts
+  if (!$('wo').hidden) drawWoPanel();
+}
+loadBuiltInWorkouts();
+const total = w => w.steps.reduce((a, s) => a + s.dur, 0);
+const stepNow = () => wo.run && wo.run.w.steps[wo.run.i];
+const fracNow = () => { const s = stepNow(); return !s || s.from == null ? null : s.from + (s.to - s.from) * Math.min(1, wo.run.st / s.dur); };
+const targetNow = () => { const f = fracNow(); return f === null ? null : Math.round(f * wo.ftp); };
+function workoutWatts() { return wo.erg ? targetNow() : null; }                       // what the trainer should hold, if anything
+function workoutGrade() { const s = stepNow(); return s && s.grade != null ? s.grade : null; }
+const stepName = s => s.kind || (s.from == null ? 'Free ride' : 'Zone ' + (zoneOf((s.from + s.to) / 2) + 1));
+const stepWatts = s => s.from == null ? (s.grade != null ? s.grade + ' %' : 'free') : s.from === s.to ? Math.round(s.from * wo.ftp) + ' W' : Math.round(s.from * wo.ftp) + '→' + Math.round(s.to * wo.ftp) + ' W';
+
+function startWorkout(w) {
+  coachStop(); bike.ergI = 0;                             // start the power-through-slope correction afresh
+  wo.run = { w, i: 0, st: 0, done: 0, said: new Set(), offFor: 0, onFor: 0, chkClock: 0, chkTurn: 0 }; wo.doneAt = 0;
+  $('wo').hidden = true; $('wobtn').classList.add('on'); $('wohud').hidden = false;
+  bike.at = 0; drawWorkout();
+}
+function endWorkout(finished) {
+  const c = wo.run && wo.run.w.coach;
+  if (finished && c) coachSay(c, c.finish, true); else coachStop();
+  wo.run = null; bike.at = 0; $('h-pw').style.color = '';
+  $('wobtn').classList.remove('on');
+  if (finished) { wo.doneAt = performance.now(); $('wo-name').textContent = 'Workout complete'; $('wo-next').textContent = 'Well ridden.'; }
+  else $('wohud').hidden = true;
+}
+function nextStep() {
+  const r = wo.run; r.done += r.w.steps[r.i].dur; r.st = 0; r.i++; bike.at = 0;
+  if (r.i >= r.w.steps.length) endWorkout(true);
+}
+function stepWorkout(dt) {
+  wo.avg += (st.power - wo.avg) * Math.min(1, dt / 3);                                   // about a 3-second average
+  if (wo.doneAt && performance.now() - wo.doneAt > 8000) { wo.doneAt = 0; if (!wo.run) $('wohud').hidden = true; }
+  const r = wo.run;
+  if (!r) return;
+  r.paused = st.power < 10;                                                               // the clock waits while you are not pedalling
+  if (r.paused) return;
+  r.st += dt;
+  while (wo.run && r.st >= r.w.steps[r.i].dur) { const over = r.st - r.w.steps[r.i].dur; nextStep(); if (wo.run) r.st = over; }
+  coachTick(dt);
+}
+function drawWorkout() {
+  const r = wo.run;
+  if (!r) return;
+  const s = stepNow(), tgt = targetNow(), all = total(r.w), next = r.w.steps[r.i + 1];
+  const ok = tgt === null ? null : Math.abs(wo.avg - tgt) <= Math.max(10, tgt * 0.05);       // on target: within 5 %, or 10 W
+  const col = ok === null ? '' : ok ? '#5fe08a' : '#ff5a4e';
+  $('h-pw').style.color = col; $('wo-pw').style.color = col;
+  $('wo-name').textContent = r.w.name + ' · step ' + (r.i + 1) + ' of ' + r.w.steps.length;
+  $('wo-left').textContent = (r.paused ? 'Paused: start pedalling · ' : '') + mmss(r.done + r.st) + ' / ' + mmss(all);
+  $('wo-tgt').textContent = tgt === null ? (s.grade != null ? s.grade + ' %' : '–') : tgt;
+  $('wo-pw').textContent = Math.round(wo.avg);
+  $('wo-step').textContent = mmss(s.dur - r.st); $('wo-steplbl').textContent = stepName(s) + ' · ' + mmss(s.dur);   // time left in the step, and its length
+  const cad = cadenceNow();                                                                 // your cadence, if anything reports it
+  $('wo-rpm').textContent = cad === null ? '–' : cad;
+  const hr = hrNow(); $('wo-hrbox').hidden = !hrm.dev && hr === null; showHr($('wo-hr'), hr);
+  $('wo-rpmlbl').textContent = s.rpm ? 'rpm · target ' + s.rpm : 'rpm';
+  $('wo-rpm').style.color = cad === null || !s.rpm ? '' : Math.abs(cad - s.rpm) <= 5 ? '#5fe08a' : '#ff5a4e';
+  const how = tgt === null ? '' : !wo.erg ? ' · ERG off' : bike.point ? ' · trainer holds it' : bike.dev ? ' · trainer: power only' : '';
+  $('wo-next').textContent = (next ? 'Next: ' + stepWatts(next) + ' for ' + mmss(next.dur) : 'Last step') + how;
+  drawProfile();
+}
+function drawProfile() {
+  const c = $('wo-prof'), r = wo.run, dpr = Math.min(devicePixelRatio, 2), W = c.clientWidth, H = c.clientHeight;
+  if (!W) return;
+  if (c.width !== Math.round(W * dpr)) { c.width = Math.round(W * dpr); c.height = Math.round(H * dpr); }
+  const g = c.getContext('2d'), steps = r.w.steps, all = total(r.w);
+  const top = Math.max(1.25, ...steps.map(s => Math.max(s.from || 0, s.to || 0))) * 1.05, y = v => H - Math.max(0.05, v / top) * H;
+  g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, W, H);
+  let x = 0;
+  steps.forEach((s, i) => {
+    const w = s.dur / all * W, a = s.from ?? 0.3, b = s.to ?? 0.3;
+    g.globalAlpha = i < r.i ? 0.4 : 0.95;
+    g.fillStyle = s.from == null ? 'rgba(255,255,255,.3)' : ZONES[zoneOf((a + b) / 2)][1];
+    g.beginPath(); g.moveTo(x + 0.6, H); g.lineTo(x + 0.6, y(a)); g.lineTo(x + w - 0.6, y(b)); g.lineTo(x + w - 0.6, H); g.fill();
+    x += w;
+  });
+  g.globalAlpha = 1; g.fillStyle = '#fff';
+  g.fillRect((r.done + r.st) / all * W - 1, 0, 2, H);                                     // where you are
+}
+function drawWoPanel() {
+  const box = $('wo'), list = [...wo.builtIn, ...wo.list];
+  box.innerHTML = `<h3>Workouts</h3>
+    <label>FTP <input id="wo-ftp" type="number" min="50" max="600" step="5" value="${wo.ftp}"> W
+      &nbsp; Max HR <input id="wo-hrmax" type="number" min="120" max="230" step="1" value="${wo.hrmax}"> bpm</label>
+    <label><input id="wo-erg" type="checkbox" ${wo.erg ? 'checked' : ''}> Trainer holds the target power (ERG)</label>
+    <label><input id="wo-coach" type="checkbox" ${coach.on ? 'checked' : ''}> Coach voice, for workouts that have one</label>
+    <label><input id="wo-coachwin" type="checkbox" ${coachWinOn ? 'checked' : ''}> Coach on screen</label>
+    <table>${list.map((w, i) => `<tr><td>${esc(w.name)}<br><span class="muted">${mmss(total(w))}${w.coach ? ' · with coach' : ''}</span></td>
+      <td><button data-go="${i}">${wo.run && wo.run.w === w ? 'Riding' : 'Ride'}</button>${w.builtIn ? '' : ` <button data-del="${i}" title="Remove">×</button>`}</td></tr>`).join('')}</table>
+    <button id="wo-add">Add MyWhoosh workout…</button><input id="wo-file" type="file" accept=".json,application/json" multiple hidden>
+    ${wo.run ? ' <button id="wo-end">Stop workout</button>' : ''}
+    <div class="muted">${wo.msg ? esc(wo.msg) + '<br>' : ''}Targets are a share of your FTP. Workout files are kept in this browser; you can also drop them on the page.</div>`;
+  $('wo-ftp').onchange = e => { wo.ftp = Math.max(50, Math.min(600, +e.target.value || wo.ftp)); e.target.value = wo.ftp; keep.set(FTP_KEY, wo.ftp); bike.at = 0; };
+  $('wo-hrmax').onchange = e => { wo.hrmax = Math.max(120, Math.min(230, +e.target.value || wo.hrmax)); e.target.value = wo.hrmax; keep.set(HRMAX_KEY, wo.hrmax); };
+  $('wo-erg').onchange = e => { wo.erg = e.target.checked; keep.set(ERG_KEY, wo.erg); bike.at = 0; };
+  $('wo-coachwin').onchange = e => { coachWinOn = e.target.checked; keep.set(COACHWIN_KEY, coachWinOn); };
+  $('wo-coach').onchange = e => { coach.on = e.target.checked; keep.set(COACH_KEY, coach.on); if (!coach.on) coachStop(); };
+  $('wo-add').onclick = () => $('wo-file').click();
+  $('wo-file').onchange = e => addWorkouts(e.target.files);
+  if ($('wo-end')) $('wo-end').onclick = () => { endWorkout(false); drawWoPanel(); };
+  box.querySelectorAll('[data-go]').forEach(b => b.onclick = () => startWorkout(list[+b.dataset.go]));
+  box.querySelectorAll('[data-del]').forEach(b => b.onclick = () => {
+    const w = list[+b.dataset.del]; if (wo.run && wo.run.w === w) endWorkout(false);
+    wo.list = wo.list.filter(x => x !== w); keep.set(WO_KEY, wo.list); drawWoPanel();
+  });
+}
+async function addWorkouts(files) {
+  const said = [];
+  for (const f of files) {
+    try { const w = fromMyWhoosh(JSON.parse(await f.text())); wo.list = wo.list.filter(x => x.name !== w.name); wo.list.push(w); said.push('Added ' + w.name + '.'); }
+    catch (err) { said.push(f.name + ' is not a MyWhoosh workout file.'); }
+  }
+  if (!keep.set(WO_KEY, wo.list)) said.push('This browser is not letting the page save, so the workouts last only until the page closes.');
+  wo.msg = said.join(' '); $('wo').hidden = false; $('wobtn').classList.add('on'); drawWoPanel();
+}
+$('wobtn').onclick = () => {
+  const box = $('wo'); box.hidden = !box.hidden;
+  $('wobtn').classList.toggle('on', !box.hidden || !!wo.run);
+  if (!box.hidden) { wo.msg = ''; drawWoPanel(); $('log').hidden = true; $('logbtn').classList.remove('on'); }
+};
+$('wo-skip').onclick = () => { if (wo.run) { nextStep(); drawWorkout(); } };
+$('wo-stop').onclick = () => endWorkout(false);
+addEventListener('dragover', e => e.preventDefault());
+addEventListener('drop', e => { e.preventDefault(); if (e.dataTransfer.files.length) addWorkouts(e.dataTransfer.files); });
+
+/* ---------- the coach on screen: a low-poly rider on a spin bike, in a small window during workouts ----------
+   Drawn by the ride's own renderer into the window's rectangle after the main scene. The legs follow the pedals at your
+   cadence, the lean follows the effort, the head and mouth move with the coach's voice, and lively lines get a fist pump. */
+const COACHWIN_KEY = 'golden-hour-ride-coachwin';
+const coachFig = (() => {
+  const S = new THREE.Scene(), cam = new THREE.PerspectiveCamera(26, 0.8, 0.1, 20), UP = new V3(0, 1, 0), P = (x, y, z) => new V3(x, y, z);
+  cam.position.set(2.15, 1.42, 2.85); cam.lookAt(0, 0.9, 0.05);
+  S.background = new THREE.Color(0x9ca2a8);
+  // a soft studio key that casts shadows, a cool fill from the other side, and a rim light from behind
+  S.add(new THREE.HemisphereLight(0xf4f1ec, 0x5b4a3a, 1.1));
+  const keyL = new THREE.DirectionalLight(0xfff0de, 3.0); keyL.position.set(2.2, 3.4, 2.4); keyL.castShadow = true;
+  keyL.shadow.mapSize.set(1024, 1024); keyL.shadow.bias = -0.0005; keyL.shadow.normalBias = 0.02;
+  Object.assign(keyL.shadow.camera, { left: -1.3, right: 1.3, top: 2.1, bottom: -0.4, near: 0.5, far: 9 });
+  S.add(keyL);
+  const fillL = new THREE.DirectionalLight(0xcfe0ff, 0.8); fillL.position.set(-2.5, 1.5, 1.5); S.add(fillL);
+  const rimL = new THREE.DirectionalLight(0xffffff, 1.8); rimL.position.set(-1, 2.6, -2.6); S.add(rimL);
+
+  const mat = (c, rough = 0.7, metal = 0, map = null) => new THREE.MeshStandardMaterial({ color: c, roughness: rough, metalness: metal, map });
+  const mesh = (geo, m, parent = S) => { const o = new THREE.Mesh(geo, m); o.castShadow = o.receiveShadow = true; parent.add(o); return o; };
+  const between = (o, a, b) => {                       // stretch a unit-tall mesh (centred on its own axis) from a to b
+    const d = new V3().subVectors(b, a), L = d.length() || 1e-6;
+    o.position.copy(a).addScaledVector(d, 0.5); o.quaternion.setFromUnitVectors(UP, d.divideScalar(L)); o.scale.y = L;
+  };
+  const tube = (rA, rB, m, seg = 16) => mesh(new THREE.CylinderGeometry(rB, rA, 1, seg), m);   // rA at the start, rB at the end
+  const ball = (r, m, parent = S) => mesh(new THREE.SphereGeometry(r, 20, 14), m, parent);
+  const tex = (draw, rep) => { const [c, g] = canvas2d(256, 256); draw(g); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(rep, rep); t.anisotropy = 8; return t; };
+
+  // the studio: pale concrete and oak planks
+  const wall = tex(g => {
+    g.fillStyle = '#a7acb1'; g.fillRect(0, 0, 256, 256);
+    for (let i = 0; i < 3000; i++) { const l = 150 + Math.random() * 45 | 0; g.fillStyle = `rgba(${l},${l + 2},${l + 6},0.22)`; g.fillRect(Math.random() * 256, Math.random() * 256, 2 + Math.random() * 7, 2 + Math.random() * 7); }
+  }, 3);
+  const oak = tex(g => {
+    for (let y = 0; y < 256; y += 32) {
+      const base = 120 + Math.random() * 25 | 0; g.fillStyle = `rgb(${base},${base * 0.72 | 0},${base * 0.47 | 0})`; g.fillRect(0, y, 256, 32);
+      for (let k = 0; k < 40; k++) { g.strokeStyle = `rgba(60,38,20,${0.08 + Math.random() * 0.1})`; g.beginPath(); const yy = y + Math.random() * 32; g.moveTo(0, yy); g.bezierCurveTo(80, yy + 3, 170, yy - 3, 256, yy + 1); g.stroke(); }
+      g.fillStyle = 'rgba(40,25,12,0.6)'; g.fillRect(0, y, 256, 1.5); g.fillRect((y * 7) % 256, y, 1.5, 32);
+    }
+  }, 2);
+  const wallM = mesh(new THREE.PlaneGeometry(8, 4), mat(0xffffff, 0.95, 0, wall)); wallM.position.set(0, 2, -1.3);
+  const floor = mesh(new THREE.PlaneGeometry(8, 6), mat(0xffffff, 0.55, 0, oak)); floor.rotation.x = -Math.PI / 2;
+
+  // the bike: a studio spin bike
+  const frameM = mat(0x2b2d31, 0.45, 0.4), steel = mat(0x8c9198, 0.3, 0.85), dark = mat(0x18191b, 0.6), orange = mat(0xe8702c, 0.4, 0.2);
+  const BB = P(0, 0.4, 0.02), GRIP = 0.33, BAR_Y = 1.1;
+  const rod = (a, b, r, m) => { const o = tube(r, r, m, 12); between(o, a, b); return o; };
+  rod(P(0, 0.05, -0.55), P(0, 0.05, 0.62), 0.04, frameM);
+  for (const z of [-0.55, 0.62]) { rod(P(-0.28, 0.035, z), P(0.28, 0.035, z), 0.035, frameM); for (const x of [-0.27, 0.27]) mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.02, 12), dark).position.set(x, 0.01, z); }
+  rod(P(0, 0.05, 0.5), P(0, 1.03, GRIP - 0.03), 0.05, frameM);
+  rod(P(0, 0.06, -0.12), BB, 0.045, frameM); rod(BB, P(0, 0.97, -0.27), 0.045, frameM);
+  rod(BB, P(0, 0.45, 0.44), 0.03, orange);
+  const flyG = new THREE.Group(); flyG.position.set(0, 0.45, 0.44); S.add(flyG);
+  const fly = mesh(new THREE.CylinderGeometry(0.23, 0.23, 0.06, 40), steel, flyG); fly.rotation.z = Math.PI / 2;
+  for (let k = 0; k < 5; k++) { const sp = mesh(new THREE.BoxGeometry(0.065, 0.38, 0.03), dark, flyG); sp.rotation.x = k * Math.PI / 5; }    // spokes, so you can see it turn
+  const guard = mesh(new THREE.CylinderGeometry(0.25, 0.25, 0.05, 40, 1, true, Math.PI * 0.55, Math.PI * 0.9), frameM); guard.rotation.z = Math.PI / 2; guard.position.set(0.035, 0.45, 0.44);
+  for (const sx of [-1, 1])                           // the bullhorn bars, each side built as its own curve
+    mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3([P(sx * 0.08, BAR_Y - 0.03, GRIP - 0.05), P(sx * 0.22, BAR_Y, GRIP), P(sx * 0.24, BAR_Y + 0.03, GRIP + 0.16), P(sx * 0.2, BAR_Y + 0.05, GRIP + 0.2)]), 24, 0.022, 10), dark);
+  rod(P(-0.08, BAR_Y - 0.03, GRIP - 0.05), P(0.08, BAR_Y - 0.03, GRIP - 0.05), 0.024, dark);
+  const phone = mesh(new THREE.BoxGeometry(0.08, 0.15, 0.012), mat(0x111111, 0.2, 0.3)); phone.position.set(0, BAR_Y + 0.07, GRIP + 0.02); phone.rotation.x = -0.5;
+  const saddle = mesh(new THREE.CapsuleGeometry(0.06, 0.16, 6, 12), dark); saddle.rotation.x = Math.PI / 2; saddle.scale.set(1.15, 1, 0.5); saddle.position.set(0, 1.0, -0.27);
+  const crankArm = [mesh(new THREE.BoxGeometry(0.025, 1, 0.035), steel), mesh(new THREE.BoxGeometry(0.025, 1, 0.035), steel)];
+  const pedalM = [mesh(new THREE.BoxGeometry(0.09, 0.02, 0.1), dark), mesh(new THREE.BoxGeometry(0.09, 0.02, 0.1), dark)];
+
+  // the rider
+  const skin = mat(0xc68e6b, 0.55), topM = mat(0x1d8c87, 0.8), legM = mat(0x262a3d, 0.75), shoeM = mat(0xf0f0f0, 0.5), hairM = mat(0x3b2819, 0.55);
+  const torsoGeo = new THREE.LatheGeometry([[0.001, 0], [0.15, 0.02], [0.158, 0.14], [0.135, 0.38], [0.148, 0.6], [0.16, 0.8], [0.14, 0.93], [0.07, 1.0], [0.001, 1.0]].map(([r, y]) => new THREE.Vector2(r, y - 0.5)), 24);
+  const torso = mesh(torsoGeo, topM), hips = ball(1, legM); hips.scale.set(0.16, 0.1, 0.12);
+  const neck = tube(0.045, 0.04, skin);
+  const thigh = [tube(0.085, 0.056, legM), tube(0.085, 0.056, legM)], shin = [tube(0.052, 0.036, legM), tube(0.052, 0.036, legM)];
+  const knee = [ball(0.057, legM), ball(0.057, legM)], ankle = [ball(0.037, legM), ball(0.037, legM)];
+  const shoes = [0, 1].map(() => { const g = new THREE.Group(); S.add(g); const u = mesh(new THREE.CapsuleGeometry(0.045, 0.15, 6, 12), shoeM, g); u.rotation.x = Math.PI / 2; u.scale.set(1, 1, 0.75); const sole = mesh(new THREE.BoxGeometry(0.085, 0.015, 0.23), dark, g); sole.position.y = -0.033; return g; });
+  const shoulderB = [ball(0.055, skin), ball(0.055, skin)];
+  const upperArm = [tube(0.046, 0.036, skin), tube(0.046, 0.036, skin)], foreArm = [tube(0.035, 0.028, skin), tube(0.035, 0.028, skin)];
+  const elbowB = [ball(0.036, skin), ball(0.036, skin)], hands = [ball(1, skin), ball(1, skin)];
+  for (const h of hands) h.scale.set(0.034, 0.03, 0.05);
+  // the head: skull, jaw, nose, ears, eyes that blink, brows, hair with a ponytail
+  const headG = new THREE.Group(); S.add(headG);
+  const skull = ball(1, skin, headG); skull.scale.set(0.092, 0.108, 0.1);
+  const jaw = ball(1, skin, headG); jaw.scale.set(0.068, 0.05, 0.07); jaw.position.set(0, -0.06, 0.025);
+  const nose = mesh(new THREE.ConeGeometry(0.014, 0.04, 10), skin, headG); nose.rotation.x = Math.PI / 2; nose.position.set(0, -0.005, 0.105);
+  for (const x of [-0.092, 0.092]) { const ear = ball(1, skin, headG); ear.scale.set(0.012, 0.026, 0.018); ear.position.set(x, -0.005, 0); }
+  const eyes = [-0.034, 0.034].map(x => {
+    const g = new THREE.Group(); g.position.set(x, 0.015, 0.085); headG.add(g);
+    ball(0.014, mat(0xf4f1ea, 0.3), g); const iris = ball(0.008, mat(0x3a2a1a, 0.3), g); iris.position.z = 0.009;
+    const brow = mesh(new THREE.BoxGeometry(0.032, 0.006, 0.008), hairM, headG); brow.position.set(x, 0.042, 0.092); brow.rotation.z = x > 0 ? -0.12 : 0.12;
+    return g;
+  });
+  const mouth = mesh(new THREE.BoxGeometry(0.036, 0.012, 0.01), mat(0x6b2a2a, 0.5), headG); mouth.position.set(0, -0.055, 0.092);
+  const hair = mesh(new THREE.SphereGeometry(0.107, 24, 16, 0, Math.PI * 2, 0, Math.PI * 0.56), hairM, headG); hair.rotation.x = -0.35; hair.position.set(0, 0.008, -0.008);
+  const pony = new THREE.Group(); pony.position.set(0, 0.06, -0.09); headG.add(pony);
+  ball(0.038, hairM, pony);
+  const ponyTail = [0, 1, 2].map(k => { const p = ball(0.034 - k * 0.007, hairM, pony); p.position.set(0, -0.04 - k * 0.045, -0.02 - k * 0.012); return p; });
+
+  // anti-aliased: the window is drawn into its own multisampled target, then onto the screen
+  let rt = null;
+  const quadS = new THREE.Scene(), quadCam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+  const quad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), new THREE.MeshBasicMaterial({ depthTest: false, depthWrite: false })); quadS.add(quad);
+
+  const ik = (A, T, L1, L2, pole) => {                 // two-bone reach: where the knee or elbow goes
+    const d = new V3().subVectors(T, A), D = Math.min(d.length(), L1 + L2 - 1e-3); d.normalize();
+    const a = (L1 * L1 - L2 * L2 + D * D) / (2 * D), h = Math.sqrt(Math.max(0, L1 * L1 - a * a));
+    const p = pole.clone().addScaledVector(d, -pole.dot(d)).normalize();
+    return new V3().copy(A).addScaledVector(d, a).addScaledVector(p, h);
+  };
+  const st8 = { crank: 0, rpm: 85, eff: 0.5, talk: 0, gestureAt: -9, blinkAt: 2, breath: 0 };
+  let ac = null, an = null, buf = null;
+  return {
+    listen(audioEl) {                                    // measure how loud the coach is, to move the mouth
+      try {
+        ac = ac || new AudioContext(); if (ac.state !== 'running') { ac.resume(); return; }
+        if (!an) { an = ac.createAnalyser(); an.fftSize = 512; buf = new Uint8Array(an.fftSize); an.connect(ac.destination); }
+        ac.createMediaElementSource(audioEl).connect(an);
+      } catch (err) {}
+    },
+    line(l) {                                             // a line starts (or null: the coach stops talking)
+      $('coachcap').textContent = l ? l.text : '';
+      if (l && (/!/.test(l.text) || /^(ok-|finish)/.test(l.id))) st8.gestureAt = performance.now() / 1000;
+    },
+    draw(dt) {
+      const box = $('coachwin'), show = coachWinOn && (wo.run || coach.busy) && !isClean();
+      box.hidden = !show;
+      if (!show) return;
+      const r = wo.run, s = r && r.w.steps[r.i], t = performance.now() / 1000;
+      // pedalling, effort, breathing and voice
+      const want = r && r.paused ? 45 : cadenceNow() || (s && s.rpm) || 85;
+      st8.rpm += (want - st8.rpm) * Math.min(1, dt * 1.5);
+      st8.crank += st8.rpm / 60 * Math.PI * 2 * dt;
+      st8.eff += ((fracNow() ?? 0.5) - st8.eff) * Math.min(1, dt * 0.8);
+      const e = Math.max(0, Math.min(1, (st8.eff - 0.45) / 0.5)), c = st8.crank;
+      st8.breath += dt * (0.35 + 0.45 * e) * Math.PI * 2;                                    // faster breathing when it's hard
+      let lvl = 0;
+      if (an && coach.busy) { an.getByteTimeDomainData(buf); let q = 0; for (const v of buf) q += (v - 128) * (v - 128); lvl = Math.min(1, Math.sqrt(q / buf.length) / 22); }
+      else if (coach.busy) lvl = 0.35 + 0.35 * Math.abs(Math.sin(t * 11)) * Math.abs(Math.sin(t * 3.7));   // the browser's voice can't be measured
+      st8.talk += (lvl - st8.talk) * Math.min(1, dt * 18);
+      flyG.rotation.x = c * 2.6;                                                                // the flywheel turns the same way as the cranks, faster
+      // body: lean with the effort, a little bob and sway with each pedal stroke
+      const lean = 0.5 + 0.25 * e, breathe = Math.sin(st8.breath);
+      const hip = P(Math.sin(c) * 0.012 * e, 1.07 + Math.sin(2 * c) * 0.01 * (0.4 + e), -0.26);
+      const shoulder = hip.clone().add(P(Math.sin(c) * 0.022 * e, Math.cos(lean) * 0.53, Math.sin(lean) * 0.53));
+      hips.position.copy(hip).add(P(0, -0.01, 0.01));
+      between(torso, hip.clone().add(P(0, -0.02, 0)), shoulder.clone().add(P(0, 0.06, 0)));
+      torso.scale.x = 1.12 + 0.015 * breathe; torso.scale.z = 0.72 + 0.03 * breathe;
+      // legs to the pedals, turning forwards: over the top, down the front, back along the bottom
+      for (const k of [0, 1]) {
+        const side = k ? 1 : -1, a = c + (k ? 0 : Math.PI);
+        const pedal = P(side * 0.14, BB.y - 0.17 * Math.cos(a), BB.z - 0.17 * Math.sin(a));
+        between(crankArm[k], P(side * 0.07, BB.y, BB.z), P(side * 0.07, pedal.y, pedal.z));
+        pedalM[k].position.copy(pedal);
+        const H = hip.clone().add(P(side * 0.09, -0.03, 0)), foot = pedal.clone().add(P(0, 0.05, 0.02));
+        const kn = ik(H, foot, 0.45, 0.44, P(side * 0.08, 0.3, 1));
+        between(thigh[k], H, kn); between(shin[k], kn, foot); knee[k].position.copy(kn); ankle[k].position.copy(foot);
+        shoes[k].position.copy(pedal).add(P(0, 0.045, 0.03)); shoes[k].rotation.x = 0.1 * Math.sin(a + 0.6);
+      }
+      // arms on the bars, or the right fist up for a moment on a lively line
+      const g = Math.max(0, Math.min(1, (t - st8.gestureAt) / 0.25)) * Math.max(0, Math.min(1, (st8.gestureAt + 1.6 - t) / 0.35));
+      for (const k of [0, 1]) {
+        const side = k ? 1 : -1, S0 = shoulder.clone().add(P(side * 0.17, -0.04, 0));
+        let hand = P(side * 0.21, BAR_Y + 0.02, GRIP + 0.02);
+        if (k && g > 0) hand = hand.lerp(shoulder.clone().add(P(0.25, 0.4, 0.12 + 0.03 * Math.sin(t * 9))), g);
+        const el = ik(S0, hand, 0.29, 0.29, P(side * 0.7, -0.4, -0.4));
+        shoulderB[k].position.copy(S0); elbowB[k].position.copy(el);
+        between(upperArm[k], S0, el); between(foreArm[k], el, hand);
+        hands[k].position.copy(hand); hands[k].lookAt(hand.clone().add(new V3().subVectors(hand, el)));
+      }
+      // head: on the neck, looking partly at you (more while talking), nodding with the voice, blinking now and then
+      const neckTop = shoulder.clone().add(P(0, Math.cos(lean * 0.4) * 0.12, Math.sin(lean * 0.4) * 0.12));
+      between(neck, shoulder.clone().add(P(0, 0.03, 0)), neckTop);
+      headG.position.copy(neckTop).add(P(0, 0.1 + st8.talk * 0.008 * Math.sin(t * 7), 0.03));
+      const look = headG.position.clone().add(P(0, -0.12, 1)).lerp(cam.position, 0.4 + 0.3 * Math.min(1, st8.talk * 3));
+      headG.lookAt(look);
+      if (t > st8.blinkAt) st8.blinkAt = t + 2.5 + Math.random() * 3;
+      for (const ey of eyes) ey.scale.y = st8.blinkAt - t < 0.12 ? 0.15 : 1;
+      mouth.scale.set(1 - st8.talk * 0.2, 0.5 + st8.talk * 3, 1); jaw.position.y = -0.06 - st8.talk * 0.008;
+      pony.rotation.x = 0.25 + 0.12 * Math.sin(2 * c + 0.9) * (0.4 + e); pony.rotation.z = 0.12 * Math.sin(c + 0.5) * (0.3 + e);
+      ponyTail.forEach((p, k) => { p.position.x = 0.012 * (k + 1) * Math.sin(c + 0.4 + k * 0.5); });
+      // draw: into the multisampled target, then into the window's rectangle on screen
+      const rc = box.getBoundingClientRect(), dpr = renderer.getPixelRatio(), W = Math.round(rc.width * dpr), Hh = Math.round(rc.height * dpr);
+      if (!rt || rt.width !== W || rt.height !== Hh) {
+        if (rt) rt.dispose();
+        rt = new THREE.WebGLRenderTarget(W, Hh, { samples: 4, type: THREE.HalfFloatType });
+        quad.material.map = rt.texture; quad.material.needsUpdate = true;
+      }
+      cam.aspect = rc.width / rc.height; cam.updateProjectionMatrix();
+      const exposure = renderer.toneMappingExposure;
+      renderer.setRenderTarget(rt); renderer.render(S, cam); renderer.setRenderTarget(null);
+      renderer.toneMappingExposure = 0.85;
+      renderer.setScissorTest(true);
+      renderer.setScissor(rc.left, innerHeight - rc.bottom, rc.width, rc.height); renderer.setViewport(rc.left, innerHeight - rc.bottom, rc.width, rc.height);
+      renderer.render(quadS, quadCam);
+      renderer.setScissorTest(false); renderer.setViewport(0, 0, innerWidth, innerHeight);
+      renderer.toneMappingExposure = exposure;
+    }
+  };
+})();
+let coachWinOn = keep.get(COACHWIN_KEY, true) !== false;
 
 /* ---------- voice: change the weather, or skip, by speaking ---------- */
 {
@@ -1575,7 +2281,7 @@ function startAudio() {
 addEventListener('pointerdown', startAudio); addEventListener('keydown', startAudio);
 
 /* ---------- ride ---------- */
-const MASS = 80, LANE = -1.75, clock = new THREE.Clock();
+const RIDER_KG = 62, BIKE_KG = 9.6, MASS = RIDER_KG + BIKE_KG, LANE = -1.75, clock = new THREE.Clock();   // MASS: what gravity pulls up the hill
 const pose = mkPose(), ahead = mkPose(), probe = mkPose(), look = new V3(), sunNdc = new V3(), fwd = new V3();
 let lean = 0, phase = 0, grade = 0, huT = 0, first = true;
 // scenery mode's weather, in order, and how many seconds each one stays
@@ -1619,6 +2325,8 @@ function tick() {
   if (Math.abs(fov - camera.fov) > 0.01) { camera.fov = fov; camera.updateProjectionMatrix(); }
 
   stepWeather(dt);
+  stepWorkout(dt);
+  if (st.power >= 10) st.time += dt;                      // riding time: stops while you are not pedalling
   rainU.uVel.value.copy(pose.t).multiplyScalar(st.v);
 
   // sun shadow box travels with the rider, pushed forward into the view
@@ -1638,10 +2346,10 @@ function tick() {
   lens.uniforms.uTime.value = uTime.value; lens.uniforms.uRain.value = wx.rain; lens.uniforms.uPaint.value = wx.paint;
   if (audio) {
     const t = audio.ac.currentTime;
-    audio.wind.g.gain.setTargetAtTime(Math.min(0.5, st.v * st.v / 400 * 0.35), t, 0.2);
+    audio.wind.g.gain.setTargetAtTime(Math.min(0.5, st.v * st.v / 400 * 0.35) * coach.duck, t, 0.2);
     audio.wind.f.frequency.setTargetAtTime(300 + st.v * 40, t, 0.2);
-    audio.tyre.g.gain.setTargetAtTime(Math.min(0.35, st.v / 15 * 0.25), t, 0.2);
-    audio.rain.g.gain.setTargetAtTime(wx.rain * 0.1, t, 0.4);
+    audio.tyre.g.gain.setTargetAtTime(Math.min(0.35, st.v / 15 * 0.25) * coach.duck, t, 0.2);
+    audio.rain.g.gain.setTargetAtTime(wx.rain * 0.1 * coach.duck, t, 0.4);
   }
 
   huT -= dt;
@@ -1649,12 +2357,17 @@ function tick() {
     huT = 0.25;
     drawHeadUnit(st.v * 3.6, st.power);
     $('h-pw').textContent = st.power.toFixed(0);
+    const cad = cadenceNow(); $('h-cad').textContent = cad === null ? '–' : cad;
+    const hr = hrNow(); $('h-hrbox').hidden = !hrm.dev && hr === null; showHr($('h-hr'), hr);
+    drawWorkout();
     $('h-sp').textContent = (st.v * 3.6).toFixed(1);
     $('h-gr').textContent = (grade >= 0 ? '+' : '') + grade.toFixed(1);
     $('h-di').textContent = (st.dist / 1000).toFixed(2);
+    $('h-ti').textContent = mmss(st.time);
   }
 
   composer.render();
+  coachFig.draw(dt);                                      // the coach window, drawn on top during workouts
   if (first) { first = false; $('loading').style.opacity = 0; setTimeout(() => $('loading').remove(), 900); }
   requestAnimationFrame(tick);
 }

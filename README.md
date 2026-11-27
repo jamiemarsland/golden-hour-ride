@@ -7,10 +7,15 @@ Live: https://golden-hour-ride.space.fast/ · Leckhampton loop: https://golden-h
 ## What's in it
 
 - Two courses: an invented mountain valley, and a real 11.9 km Leckhampton loop built from Environment Agency lidar, dressed as the 19th-century hill (sheep, hay stooks, quarry smoke).
-- Four looks: Golden, Overcast, Rain and Mist. Buttons at the top, keys 1–4, or by voice.
+- Four looks: Golden, Overcast, Rain and Mist. Buttons at the top, keys 1–4, or by voice. (A fifth, Starry, is still being worked on: it only appears on a local copy, on key 5.)
+- A Christmas ride: add `?theme=christmas` to the valley course for a snowy evening, with falling snow, fairy lights in the pines and lit chalets. It adds a Snow look; say "snow" to bring it back.
+- Scenery mode: add `?scenery` and the ride drifts along on its own at a steady pace with nothing on screen, the weather slowly changing, for leaving on in the background. `?scenery=nobars` also hides the handlebars, for filming.
 - Skip forward and back 250 m with the arrow keys.
 - Hide everything on screen for a clean view: the Hide info button, the H key, or say "hide". Press H, click, or say "show" to bring it back.
-- Power from a slider, or from a Bluetooth trainer (Chrome or Edge). If the trainer supports resistance control (FTMS), the ride also sends it the road gradient, so climbs feel harder; the button shows "Trainer: power and gradient" or "Trainer: power only". The trainer feels half the road gradient by default; the − and + buttons beside the trainer button change that in steps of 10 %, from off to the full gradient, and the choice is kept in the browser (`?hills=` sets it for one visit). With voice on, say "easier" or "harder" to move it by 20 %, "flat" for off, or "full" for all of it. The last trainer is remembered: the button reads "Reconnect trainer" and rejoins it without the browser's device list where Chrome allows that, and a dropped connection is retried automatically.
+- Power from a slider, or from a Bluetooth trainer (Chrome or Edge). If the trainer supports resistance control (FTMS, or Bkool's own Bluetooth control on a Bkool Smart Pro 3 / Zycle Smart ZPro), the ride also sends it the road gradient, so climbs feel harder; the button shows "Trainer: power and gradient" or "Trainer: power only". The trainer feels half the road gradient by default; the − and + buttons beside the trainer button change that in steps of 10 %, from off to the full gradient, and the choice is kept in the browser (`?hills=` sets it for one visit). With voice on, say "easier" or "harder" to move it by 20 %, "flat" for off, or "full" for all of it. The last trainer is remembered: the button reads "Reconnect trainer" and rejoins it without the browser's device list where Chrome allows that, and a dropped connection is retried automatically.
+- A coach on screen during workouts: a small 3D window with a low-poly rider on a spin bike who pedals at your cadence, leans in harder in the efforts, talks along with the coach's voice (with the line as a caption) and raises a fist on the lively lines. Turn it off with "Coach on screen" in the Workout panel.
+- Heart rate from any Bluetooth heart-rate monitor (chest strap or armband, Chrome or Edge): the Heart rate button connects it, the bpm appears with the other numbers and in the workout panel, and a second click disconnects it. The last monitor is remembered and rejoined without the browser's device list where Chrome allows that, and a dropped connection is retried.
+- Workouts: the Workout button lists them; add MyWhoosh workout files (.json) with "Add MyWhoosh workout…" or by dropping them on the page. Set your FTP there. While you ride one, a panel shows the target power, your 3-second average in green (within 5 % or 10 W) or red, the time left in the step and the workout, the target cadence (and your own, in green or red within 5 rpm, when the trainer or power meter reports it) and the workout's shape. With "Trainer holds the target power (ERG)" on, a controllable trainer holds each target; otherwise it keeps following the road. The clock waits while you are not pedalling.
 - Descents count half in the speed model and the rider brakes above 54 km/h, so downhill speed stays sensible.
 
 ## Run it locally
@@ -25,7 +30,17 @@ Then open http://localhost:8791/.
 
 - `index.html` – the whole ride.
 - `assets/` – textures and course data. `textures.js` is an embedded copy of the textures, used only when the page is opened straight from disk.
-- `tools/` – scripts that build the Leckhampton course data.
+- `workouts/` – the workouts that come with the ride, as MyWhoosh workout files (.json). To add one, put the file here and add its name to `workouts/index.json`.
+  A workout can have a spoken coach in `<name>.coach.json`: lines timed within each step (`at` seconds from its start, or `before_end`), a `finish` line, and `feedback` pools of short remarks for power too high or low, cadence too high or low, and praise. `rules` set how long you must be off target before a remark (8 s), the least time between remarks (30 s) and the quiet at the start of each step. Speak the lines with Kyutai Pocket TTS (CPU only; the first run downloads the model):
+
+  ```bash
+  uv run tools/build_coach_audio.py workouts/sweet-spot-3x10.coach.json
+  ```
+
+  `checkins` make the coach read out live numbers every few minutes (`every`, from `first_after` seconds in), taking turns between heart rate ("Let's look at your heart rate. 142 beats per minute. That is very solid.") and power with cadence. Each is put together from short clips: a phrase, a number, a unit and a verdict. Heart rate is judged against Max HR in the Workout panel and the step's intensity; power against the target. The numbers (30–220, then watts in fives to 600) are spoken once per voice into a shared `workouts/audio/_numbers-…/` folder.
+  `voice` is a built-in pocket-tts voice (alba, eve, marius, …) or a voice file in the project, such as `voices/announcer.safetensors` made with `uvx pocket-tts export-voice <audio> voices/announcer.safetensors` (exporting needs Kyutai's gated voice-cloning weights; using the file does not). Export it with the same `--language` as the coach file.
+  It writes small .m4a clips and a `manifest.json` to `workouts/audio/<name>/`, and only re-speaks lines that changed. A line with no clip is read by the browser's own voice. The Coach voice checkbox in the Workout panel turns it off.
+- `tools/` – scripts that build the Leckhampton course data, and `trainer-probe.html` for finding out how a trainer talks over Bluetooth.
 - `deploy.sh` – publishes to Spacefast.
 
 ## Credits

@@ -2,3 +2,7 @@ dist/
 index.v*.html
 .DS_Store
 __pycache__/
+bugreport*.zip
+*.btsnoop
+btsnoop_hci.log*
+pocket-tts-poc/output.wav

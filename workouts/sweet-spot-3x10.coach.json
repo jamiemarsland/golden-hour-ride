@@ -1,0 +1,515 @@
+{
+  "workout": "sweet-spot-3x10.json",
+  "language": "english",
+  "voice": "voices/announcer.safetensors",
+  "temperature": 0.7,
+  "rules": {
+    "after_seconds_off": 8,
+    "min_gap": 30,
+    "quiet_after_step_start": 15,
+    "cadence_tolerance": 8,
+    "praise_after": 120
+  },
+  "steps": [
+    {
+      "step": 1,
+      "cues": [
+        {
+          "id": "s1-start",
+          "at": 0,
+          "text": "Welcome in Jürgen! ... Grab your water, ... grab your towel, and let's do this. One hour today, three ten-minute sweet spot blocks. Nice and easy for now. We're just getting the legs moving."
+        },
+         {
+          "id": "s1-start-20",
+          "at": 20,
+          "text": "Let's get the legs moving. Easy pedalling, nice and smooth. Settle into a rhythm enjoy the landscape.... We're doing a sweet spot session today. Keep your water close, and your towel closer. This is going to be a good one."
+        },
+        {
+          "id": "s1-extra-60",
+          "at": 60,
+          "text": "How are the legs? Don't judge them yet. Give them a few minutes to wake up. Everybody's warm-up feels a little clunky at first."
+        },
+        {
+          "id": "s1-extra-120",
+          "at": 120,
+          "text": "Get that fan on you. There's no breeze indoors, so make your own. Trust me, you'll thank me in block three."
+        },
+        {
+          "id": "s1-extra-180",
+          "at": 180,
+          "text": "Keep it easy, keep it honest. The warm-up is not the workout. We're saving the good stuff for later."
+        },
+        {
+          "id": "s1-extra-240",
+          "at": 240,
+          "text": "Quick word on sweet spot. It sits just under your threshold. Hard enough to build real endurance, controlled enough that we can stack up thirty minutes of it."
+        },
+        {
+          "id": "s1-half",
+          "at": 300,
+          "text": "Five minutes in. Feel that warmth coming? Head up, shoulders down and away from your ears. Soft grip, a little bend in the elbows. Find your rhythm."
+        },
+        {
+          "id": "s1-extra-360",
+          "at": 360,
+          "text": "Take a sip. Little and often. Then right back to that easy spin."
+        },
+        {
+          "id": "s1-extra-420",
+          "at": 420,
+          "text": "Let's check in from the ground up. Feet flat as you push, and think about the whole pedal stroke. Push, pull, all the way round."
+        },
+        {
+          "id": "s1-extra-480",
+          "at": 480,
+          "text": "Two minutes out. Here's the plan. Three blocks, all the same quality. No hero first block and miserable last one. Steady wins today."
+        },
+        {
+          "id": "s1-end",
+          "before_end": 30,
+          "text": "Thirty seconds! Pick a gear that feels good and let the trainer bring the resistance up. No heroics in the first minute. Here it comes."
+        }
+      ]
+    },
+    {
+      "step": 2,
+      "cues": [
+        {
+          "id": "s2-start",
+          "at": 0,
+          "text": "Here we go, block one! Ten minutes at eighty-eight percent. Strong and controlled, not flat out. Settle in and own it."
+        },
+        {
+          "id": "s2-extra-60",
+          "at": 60,
+          "text": "Let the trainer find the number. You should feel the work now, with something left in the tank. That's the sweet spot."
+        },
+        {
+          "id": "s2-extra-120",
+          "at": 120,
+          "text": "This is why we love sweet spot. Thirty minutes of real aerobic work today, and you'll still be able to walk tomorrow."
+        },
+        {
+          "id": "s2-extra-180",
+          "at": 180,
+          "text": "Breathe. Long and steady. Don't hold your breath when it gets tough. Let it in, let it out."
+        },
+        {
+          "id": "s2-extra-240",
+          "at": 240,
+          "text": "Picture a long climb. Go too hard at the bottom and it bites you at the top. Ride the whole hill, not just the first bend."
+        },
+        {
+          "id": "s2-half",
+          "at": 300,
+          "text": "Halfway through block one! Core engaged, chest open, shoulders relaxed. Let the legs do the work. You could hold this for another five, so let's do exactly that."
+        },
+        {
+          "id": "s2-extra-360",
+          "at": 360,
+          "text": "Every minute here is another brick in your foundation. It doesn't happen in one day. It happens because you keep showing up."
+        },
+        {
+          "id": "s2-extra-420",
+          "at": 420,
+          "text": "Check in. Can you still say a few words? Good. That's right where we want you."
+        },
+        {
+          "id": "s2-extra-480",
+          "at": 480,
+          "text": "Two minutes left. Stop chasing every single watt. Watch the trend, not the flicker. Smooth is fast."
+        },
+        {
+          "id": "s2-end",
+          "before_end": 60,
+          "text": "Sixty seconds! Same rhythm, same effort, right to the end. Easy minutes are waiting for you."
+        }
+      ]
+    },
+    {
+      "step": 3,
+      "cues": [
+        {
+          "id": "s3-start",
+          "at": 0,
+          "text": "Block one, done! Nice work. Let the resistance drop, keep the legs turning, grab a drink and dry off. We recover now so the next two are just as good."
+        },
+        {
+          "id": "s3-extra-60",
+          "at": 60,
+          "text": "Keep spinning. Easy pedalling helps you recover better than stopping. Loose legs, loose shoulders."
+        },
+        {
+          "id": "s3-extra-120",
+          "at": 120,
+          "text": "Fun fact while we spin. Lactate isn't just waste. Your body actually reuses it as fuel. Pretty clever machine you've got there."
+        },
+        {
+          "id": "s3-extra-180",
+          "at": 180,
+          "text": "Two minutes. Sip, check the fan, and ask yourself how that first block felt. Controlled? Good. That's the plan."
+        },
+        {
+          "id": "s3-extra-240",
+          "at": 240,
+          "text": "One minute out. Remember, resistance is always relative to you. If today is a heavy day, it's fine to turn the intensity down a notch. Showing up is what counts."
+        },
+        {
+          "id": "s3-end",
+          "before_end": 30,
+          "text": "Thirty seconds. Get ready to pick it up. Same power as before. Nothing to prove, just a job to do."
+        }
+      ]
+    },
+    {
+      "step": 4,
+      "cues": [
+        {
+          "id": "s4-start",
+          "at": 0,
+          "text": "We're back! Block two, ten minutes. It might feel a little harder than the first, and that's normal. This is where we build the strength to keep the power coming when the legs get tired."
+        },
+        {
+          "id": "s4-extra-60",
+          "at": 60,
+          "text": "Give it a minute to settle. If it feels awkward, don't spike the cadence. Just breathe and let the rhythm come back."
+        },
+        {
+          "id": "s4-extra-120",
+          "at": 120,
+          "text": "FTP is a guide, not a magic number. Sleep, stress and heat all change how this feels. Ride what's in front of you today."
+        },
+        {
+          "id": "s4-extra-180",
+          "at": 180,
+          "text": "No traffic lights, no descents, no freewheeling. Just you and the work. That's the beauty of riding indoors."
+        },
+        {
+          "id": "s4-extra-240",
+          "at": 240,
+          "text": "Check your face. Clenching your jaw? Let it go. No extra watts come from your teeth."
+        },
+        {
+          "id": "s4-half",
+          "at": 300,
+          "text": "Five down, five to go! Your heart rate might creep up even though the power hasn't. That's normal. Fan on, relax the grip, keep breathing."
+        },
+        {
+          "id": "s4-extra-360",
+          "at": 360,
+          "text": "Stay with me. A slow rise in heart rate is fine. But if something feels really wrong, back off. You know your body."
+        },
+        {
+          "id": "s4-extra-420",
+          "at": 420,
+          "text": "Three minutes. This is patience under load. You don't have to feel amazing every second to ride a great interval."
+        },
+        {
+          "id": "s4-extra-480",
+          "at": 480,
+          "text": "Two minutes. Give yourself one job. A smooth cadence, or steady breathing. Just one. Nail it."
+        },
+        {
+          "id": "s4-end",
+          "before_end": 60,
+          "text": "Last minute of block two! Stick with it. When this one's done, that's twenty minutes of sweet spot in the bank."
+        }
+      ]
+    },
+    {
+      "step": 5,
+      "cues": [
+        {
+          "id": "s5-start",
+          "at": 0,
+          "text": "Two down, one to go! Big drink, drop those shoulders, let the breathing settle. We want to start the last one ready, not rushed."
+        },
+        {
+          "id": "s5-extra-60",
+          "at": 60,
+          "text": "Enjoy this. Recovery isn't wasted time. It's what lets you ride the next block with quality."
+        },
+        {
+          "id": "s5-extra-120",
+          "at": 120,
+          "text": "Fuel note. On longer, harder sessions, carbs help you keep going. For this hour, it mostly depends on what you ate before."
+        },
+        {
+          "id": "s5-extra-180",
+          "at": 180,
+          "text": "Think about your weekend rides. Repeating a solid effort when you're already tired. That's exactly what we're training right now."
+        },
+        {
+          "id": "s5-extra-240",
+          "at": 240,
+          "text": "One minute out. The target isn't going up. The challenge is doing it again on tired legs. You've got this."
+        },
+        {
+          "id": "s5-end",
+          "before_end": 30,
+          "text": "Thirty seconds to the last block! Legs feeling heavy? Of course they are. Find your rhythm early and take it one minute at a time."
+        }
+      ]
+    },
+    {
+      "step": 6,
+      "cues": [
+        {
+          "id": "s6-start",
+          "at": 0,
+          "text": "Last one, let's go! Same ten minutes, same power. This is the top of a long climb with kilometres already in your legs. Controlled, steady, strong."
+        },
+        {
+          "id": "s6-extra-60",
+          "at": 60,
+          "text": "Nine to go. Don't count the seconds. Settle into a cadence you like and give yourself one small job at a time."
+        },
+        {
+          "id": "s6-extra-120",
+          "at": 120,
+          "text": "Easy rides matter too. Not every day needs to be a sweet spot day. But today it is, so let's finish it well."
+        },
+        {
+          "id": "s6-extra-180",
+          "at": 180,
+          "text": "Legs heavy? That's fatigue doing its thing, not fitness slipping away. Keep it manageable. Keep it smooth."
+        },
+        {
+          "id": "s6-extra-240",
+          "at": 240,
+          "text": "Be the smart rider on the climb. Steady pace, no attacking every bend. Nearly halfway."
+        },
+        {
+          "id": "s6-half",
+          "at": 300,
+          "text": "Five minutes left! Legs talking to you? Answer with good form. Smooth pedal stroke, shoulders down, steady breathing. Just keep chipping away. I'm right here with you."
+        },
+        {
+          "id": "s6-extra-360",
+          "at": 360,
+          "text": "Four minutes. Consistency is the goal. If it gets unusually hard, back off rather than forcing the number."
+        },
+        {
+          "id": "s6-extra-420",
+          "at": 420,
+          "text": "Three minutes. Stop staring at the clock. Look up, find that smooth pedal stroke, and ride it."
+        },
+        {
+          "id": "s6-extra-480",
+          "at": 480,
+          "text": "Two minutes! Almost there. Keep the cadence up so the trainer doesn't wind up on you. And no medals for extra suffering."
+        },
+        {
+          "id": "s6-end",
+          "before_end": 60,
+          "text": "Last sixty seconds! Stay with that rhythm. No sprint finish, just a strong, steady one. Finish it the way you started it."
+        }
+      ]
+    },
+    {
+      "step": 7,
+      "cues": [
+        {
+          "id": "s7-start",
+          "at": 0,
+          "text": "That's it, the hard work is done! Ten minutes to wind it down. Breathe it out and enjoy the easy spin. Thirty minutes of sweet spot. That's real foundation you just built."
+        },
+        {
+          "id": "s7-extra-60",
+          "at": 60,
+          "text": "Feel how light that is? Enjoy it. Zero need to push now. You earned this."
+        },
+        {
+          "id": "s7-extra-120",
+          "at": 120,
+          "text": "Let your breathing and heart rate come down on their own. Easy legs, easy mind."
+        },
+        {
+          "id": "s7-extra-180",
+          "at": 180,
+          "text": "Think back over the three blocks. Did they feel the same, or did the last one bite? Either way, that's useful for next time."
+        },
+        {
+          "id": "s7-extra-240",
+          "at": 240,
+          "text": "Something worth noticing over the weeks. When the same power starts to feel easier, that's progress you can feel, not just see."
+        },
+        {
+          "id": "s7-extra-300",
+          "at": 300,
+          "text": "Five minutes left. A clear head is part of what we get out of this too. Away from the noise, just you, your breathing and the road."
+        },
+        {
+          "id": "s7-extra-360",
+          "at": 360,
+          "text": "Balance these with genuinely easy rides. You can build a lot of fitness without every session hurting."
+        },
+        {
+          "id": "s7-extra-420",
+          "at": 420,
+          "text": "Three minutes. After the ride, a normal meal with some carbs and protein. Nothing fancy needed."
+        },
+        {
+          "id": "s7-extra-480",
+          "at": 480,
+          "text": "Two more minutes. If there's another hard day coming, listen to your legs tomorrow. A flexible plan is a smart plan."
+        },
+        {
+          "id": "s7-extra-540",
+          "at": 540,
+          "text": "Last minute. Easy spin all the way home. Well, we're already home, but you know what I mean."
+        }
+      ]
+    }
+  ],
+  "finish": {
+    "id": "finish",
+    "text": "And that's a wrap! You showed up, you did the work, and that's how the foundation gets built. Grab some water, get something to eat, and let those legs recover. See you next ride!"
+  },
+  "checkins": {
+    "every": 240,
+    "first_after": 150,
+    "units": {
+      "bpm": "beats per minute.",
+      "watts": "watts.",
+      "watts_and": "watts, and",
+      "rpm": "r p m."
+    },
+    "heart_rate": {
+      "intro": [
+        {
+          "id": "hr-intro-1",
+          "text": "Let's look at your heart rate."
+        },
+        {
+          "id": "hr-intro-2",
+          "text": "Quick check on the heart rate."
+        }
+      ],
+      "good": [
+        {
+          "id": "hr-good-1",
+          "text": "That is very solid."
+        },
+        {
+          "id": "hr-good-2",
+          "text": "Right where it should be."
+        }
+      ],
+      "high": [
+        {
+          "id": "hr-high-1",
+          "text": "That's a little high."
+        },
+        {
+          "id": "hr-high-2",
+          "text": "A touch higher than I'd like. Keep breathing steadily."
+        }
+      ],
+      "too_high": [
+        {
+          "id": "hr-too-high-1",
+          "text": "Watch your heart rate, slow it down a bit."
+        },
+        {
+          "id": "hr-too-high-2",
+          "text": "That's high. Ease off a little and let it come down."
+        }
+      ]
+    },
+    "power": {
+      "intro": [
+        {
+          "id": "pw-intro-1",
+          "text": "What about the power numbers?"
+        },
+        {
+          "id": "pw-intro-2",
+          "text": "Let's check the power."
+        }
+      ],
+      "good": [
+        {
+          "id": "pw-good-1",
+          "text": "This is great, keep it up."
+        },
+        {
+          "id": "pw-good-2",
+          "text": "Spot on. Keep doing exactly that."
+        }
+      ],
+      "high": [
+        {
+          "id": "pw-high-1",
+          "text": "That's a bit over the target. Ease off slightly."
+        }
+      ],
+      "low": [
+        {
+          "id": "pw-low-1",
+          "text": "That's a little under the target. Push just a bit more."
+        }
+      ]
+    }
+  },
+  "feedback": {
+    "power_high": [
+      {
+        "id": "hi-1",
+        "text": "A little hot! Ease back and let the trainer settle."
+      },
+      {
+        "id": "hi-2",
+        "text": "Easy, tiger. No bonus points for extra watts today. Keep it smooth."
+      },
+      {
+        "id": "hi-3",
+        "text": "Bring it back to the target. Steady rhythm, no surges."
+      }
+    ],
+    "power_low": [
+      {
+        "id": "lo-1",
+        "text": "Just under the target. Keep those pedals turning and let the trainer catch up."
+      },
+      {
+        "id": "lo-2",
+        "text": "Power's dipped. Find your rhythm again, nice and smooth."
+      },
+      {
+        "id": "lo-3",
+        "text": "A little below. If the legs are cooked today, it's okay to lower the intensity."
+      }
+    ],
+    "cadence_high": [
+      {
+        "id": "cad-hi-1",
+        "text": "Legs are spinning quick! Bring the cadence down a touch."
+      },
+      {
+        "id": "cad-hi-2",
+        "text": "Slow the legs a little. Smooth and controlled."
+      }
+    ],
+    "cadence_low": [
+      {
+        "id": "cad-lo-1",
+        "text": "Cadence is dropping. Lift it back up before it gets heavy."
+      },
+      {
+        "id": "cad-lo-2",
+        "text": "Quicker legs! If it's too heavy, turn the target down."
+      }
+    ],
+    "on_target": [
+      {
+        "id": "ok-1",
+        "text": "That's it! Right in the sweet spot. Love it."
+      },
+      {
+        "id": "ok-2",
+        "text": "Spot on. Keep doing exactly what you're doing."
+      }
+    ]
+  }
+}

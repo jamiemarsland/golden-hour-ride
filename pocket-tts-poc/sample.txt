@@ -1,0 +1,3 @@
+LORIOT runs a LoRaWAN network server. Gateways forward radio packets from thousands of sensors,
+and the network server deduplicates them, checks their integrity, and hands the data to applications.
+This sentence was synthesized locally on the CPU by Kyutai's Pocket TTS.

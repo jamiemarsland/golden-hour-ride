@@ -1,0 +1,477 @@
+{
+  "language": "english",
+  "voice": "voices/announcer.safetensors",
+  "numbers": "_numbers-2c87d098d4",
+  "clips": {
+    "s1-extra-60": {
+      "file": "s1-extra-60-fef396482bd5.m4a",
+      "hash": "fef396482bd5",
+      "seconds": 7.92
+    },
+    "s1-extra-120": {
+      "file": "s1-extra-120-c89865aa63b5.m4a",
+      "hash": "c89865aa63b5",
+      "seconds": 8.0
+    },
+    "s1-extra-180": {
+      "file": "s1-extra-180-beb8241bb27e.m4a",
+      "hash": "beb8241bb27e",
+      "seconds": 6.88
+    },
+    "s1-extra-240": {
+      "file": "s1-extra-240-7e6ec24ce85b.m4a",
+      "hash": "7e6ec24ce85b",
+      "seconds": 9.36
+    },
+    "s1-half": {
+      "file": "s1-half-b1ca0b766c9c.m4a",
+      "hash": "b1ca0b766c9c",
+      "seconds": 10.8
+    },
+    "s1-extra-360": {
+      "file": "s1-extra-360-da8c3f985d0c.m4a",
+      "hash": "da8c3f985d0c",
+      "seconds": 6.48
+    },
+    "s1-extra-420": {
+      "file": "s1-extra-420-6edbab4a331e.m4a",
+      "hash": "6edbab4a331e",
+      "seconds": 8.4
+    },
+    "s1-extra-480": {
+      "file": "s1-extra-480-a9707ae76efd.m4a",
+      "hash": "a9707ae76efd",
+      "seconds": 10.32
+    },
+    "s1-end": {
+      "file": "s1-end-b99a1ea123d4.m4a",
+      "hash": "b99a1ea123d4",
+      "seconds": 8.32
+    },
+    "s2-start": {
+      "file": "s2-start-a8cd8db96415.m4a",
+      "hash": "a8cd8db96415",
+      "seconds": 8.88
+    },
+    "s2-extra-60": {
+      "file": "s2-extra-60-a1a92e8848bb.m4a",
+      "hash": "a1a92e8848bb",
+      "seconds": 8.08
+    },
+    "s2-extra-120": {
+      "file": "s2-extra-120-336745ba1670.m4a",
+      "hash": "336745ba1670",
+      "seconds": 7.84
+    },
+    "s2-extra-180": {
+      "file": "s2-extra-180-b09a57b0a3a7.m4a",
+      "hash": "b09a57b0a3a7",
+      "seconds": 6.96
+    },
+    "s2-extra-240": {
+      "file": "s2-extra-240-9791ceb12c08.m4a",
+      "hash": "9791ceb12c08",
+      "seconds": 8.96
+    },
+    "s2-half": {
+      "file": "s2-half-a7abfc13a763.m4a",
+      "hash": "a7abfc13a763",
+      "seconds": 10.96
+    },
+    "s2-extra-360": {
+      "file": "s2-extra-360-86270b4a2be5.m4a",
+      "hash": "86270b4a2be5",
+      "seconds": 7.28
+    },
+    "s2-extra-420": {
+      "file": "s2-extra-420-e7ecd0d6b913.m4a",
+      "hash": "e7ecd0d6b913",
+      "seconds": 5.76
+    },
+    "s2-extra-480": {
+      "file": "s2-extra-480-85495ddd7c20.m4a",
+      "hash": "85495ddd7c20",
+      "seconds": 8.88
+    },
+    "s2-end": {
+      "file": "s2-end-57a12dec4b58.m4a",
+      "hash": "57a12dec4b58",
+      "seconds": 7.2
+    },
+    "s3-start": {
+      "file": "s3-start-8fe85e6d5313.m4a",
+      "hash": "8fe85e6d5313",
+      "seconds": 10.4
+    },
+    "s3-extra-60": {
+      "file": "s3-extra-60-b3291d6bb0ff.m4a",
+      "hash": "b3291d6bb0ff",
+      "seconds": 7.52
+    },
+    "s3-extra-120": {
+      "file": "s3-extra-120-56fe49ba3c31.m4a",
+      "hash": "56fe49ba3c31",
+      "seconds": 9.68
+    },
+    "s3-extra-180": {
+      "file": "s3-extra-180-e8a260b47861.m4a",
+      "hash": "e8a260b47861",
+      "seconds": 9.44
+    },
+    "s3-extra-240": {
+      "file": "s3-extra-240-95c3aa322856.m4a",
+      "hash": "95c3aa322856",
+      "seconds": 11.2
+    },
+    "s3-end": {
+      "file": "s3-end-f5465e6d4886.m4a",
+      "hash": "f5465e6d4886",
+      "seconds": 7.52
+    },
+    "s4-start": {
+      "file": "s4-start-daecb14017f9.m4a",
+      "hash": "daecb14017f9",
+      "seconds": 12.64
+    },
+    "s4-extra-60": {
+      "file": "s4-extra-60-2b2334ff30af.m4a",
+      "hash": "2b2334ff30af",
+      "seconds": 7.12
+    },
+    "s4-extra-120": {
+      "file": "s4-extra-120-8e05af50e35f.m4a",
+      "hash": "8e05af50e35f",
+      "seconds": 10.48
+    },
+    "s4-extra-180": {
+      "file": "s4-extra-180-c92d3bf2862a.m4a",
+      "hash": "c92d3bf2862a",
+      "seconds": 8.64
+    },
+    "s4-extra-240": {
+      "file": "s4-extra-240-a03914bd35ac.m4a",
+      "hash": "a03914bd35ac",
+      "seconds": 6.96
+    },
+    "s4-half": {
+      "file": "s4-half-69aac8554e0c.m4a",
+      "hash": "69aac8554e0c",
+      "seconds": 9.36
+    },
+    "s4-extra-360": {
+      "file": "s4-extra-360-3b38c7b32246.m4a",
+      "hash": "3b38c7b32246",
+      "seconds": 8.32
+    },
+    "s4-extra-420": {
+      "file": "s4-extra-420-3052feabd42c.m4a",
+      "hash": "3052feabd42c",
+      "seconds": 7.04
+    },
+    "s4-extra-480": {
+      "file": "s4-extra-480-79e9d940c028.m4a",
+      "hash": "79e9d940c028",
+      "seconds": 8.48
+    },
+    "s4-end": {
+      "file": "s4-end-6c1f0cc22bbd.m4a",
+      "hash": "6c1f0cc22bbd",
+      "seconds": 7.28
+    },
+    "s5-start": {
+      "file": "s5-start-9e220461a069.m4a",
+      "hash": "9e220461a069",
+      "seconds": 9.76
+    },
+    "s5-extra-60": {
+      "file": "s5-extra-60-fdaaa5a6cbd1.m4a",
+      "hash": "fdaaa5a6cbd1",
+      "seconds": 7.04
+    },
+    "s5-extra-120": {
+      "file": "s5-extra-120-a64374689c67.m4a",
+      "hash": "a64374689c67",
+      "seconds": 8.48
+    },
+    "s5-extra-180": {
+      "file": "s5-extra-180-af203fcb13cb.m4a",
+      "hash": "af203fcb13cb",
+      "seconds": 7.12
+    },
+    "s5-extra-240": {
+      "file": "s5-extra-240-2137b7ccff76.m4a",
+      "hash": "2137b7ccff76",
+      "seconds": 7.52
+    },
+    "s5-end": {
+      "file": "s5-end-200131f6efb7.m4a",
+      "hash": "200131f6efb7",
+      "seconds": 8.64
+    },
+    "s6-start": {
+      "file": "s6-start-f09788909dc8.m4a",
+      "hash": "f09788909dc8",
+      "seconds": 11.44
+    },
+    "s6-extra-60": {
+      "file": "s6-extra-60-0a6bcba689e7.m4a",
+      "hash": "0a6bcba689e7",
+      "seconds": 7.92
+    },
+    "s6-extra-120": {
+      "file": "s6-extra-120-12c4f70f7192.m4a",
+      "hash": "12c4f70f7192",
+      "seconds": 8.08
+    },
+    "s6-extra-180": {
+      "file": "s6-extra-180-3ceb970c0532.m4a",
+      "hash": "3ceb970c0532",
+      "seconds": 7.92
+    },
+    "s6-extra-240": {
+      "file": "s6-extra-240-efba9e025650.m4a",
+      "hash": "efba9e025650",
+      "seconds": 7.04
+    },
+    "s6-half": {
+      "file": "s6-half-49f16ed63b59.m4a",
+      "hash": "49f16ed63b59",
+      "seconds": 12.56
+    },
+    "s6-extra-360": {
+      "file": "s6-extra-360-f0a2c8196718.m4a",
+      "hash": "f0a2c8196718",
+      "seconds": 8.08
+    },
+    "s6-extra-420": {
+      "file": "s6-extra-420-8d390ea471bf.m4a",
+      "hash": "8d390ea471bf",
+      "seconds": 7.2
+    },
+    "s6-extra-480": {
+      "file": "s6-extra-480-6539e0a58c2b.m4a",
+      "hash": "6539e0a58c2b",
+      "seconds": 8.4
+    },
+    "s6-end": {
+      "file": "s6-end-94c94ab2d0d6.m4a",
+      "hash": "94c94ab2d0d6",
+      "seconds": 8.88
+    },
+    "s7-start": {
+      "file": "s7-start-a75c21ed2339.m4a",
+      "hash": "a75c21ed2339",
+      "seconds": 12.4
+    },
+    "s7-extra-60": {
+      "file": "s7-extra-60-0ab693a2426d.m4a",
+      "hash": "0ab693a2426d",
+      "seconds": 6.8
+    },
+    "s7-extra-120": {
+      "file": "s7-extra-120-14765495975d.m4a",
+      "hash": "14765495975d",
+      "seconds": 6.72
+    },
+    "s7-extra-180": {
+      "file": "s7-extra-180-4a1e5e1f572b.m4a",
+      "hash": "4a1e5e1f572b",
+      "seconds": 9.68
+    },
+    "s7-extra-240": {
+      "file": "s7-extra-240-3e5f8cd42bc7.m4a",
+      "hash": "3e5f8cd42bc7",
+      "seconds": 8.16
+    },
+    "s7-extra-300": {
+      "file": "s7-extra-300-a575cbe2a910.m4a",
+      "hash": "a575cbe2a910",
+      "seconds": 8.4
+    },
+    "s7-extra-360": {
+      "file": "s7-extra-360-8a40622042aa.m4a",
+      "hash": "8a40622042aa",
+      "seconds": 6.88
+    },
+    "s7-extra-420": {
+      "file": "s7-extra-420-dc99413f36ef.m4a",
+      "hash": "dc99413f36ef",
+      "seconds": 7.04
+    },
+    "s7-extra-480": {
+      "file": "s7-extra-480-421b7597c4d3.m4a",
+      "hash": "421b7597c4d3",
+      "seconds": 8.16
+    },
+    "s7-extra-540": {
+      "file": "s7-extra-540-f7df7b4d89a7.m4a",
+      "hash": "f7df7b4d89a7",
+      "seconds": 7.52
+    },
+    "finish": {
+      "file": "finish-55aacfd6f413.m4a",
+      "hash": "55aacfd6f413",
+      "seconds": 12.88
+    },
+    "hi-1": {
+      "file": "hi-1-a046c7b86868.m4a",
+      "hash": "a046c7b86868",
+      "seconds": 3.92
+    },
+    "hi-2": {
+      "file": "hi-2-a39db101cc93.m4a",
+      "hash": "a39db101cc93",
+      "seconds": 5.68
+    },
+    "hi-3": {
+      "file": "hi-3-355c02433d83.m4a",
+      "hash": "355c02433d83",
+      "seconds": 4.48
+    },
+    "lo-1": {
+      "file": "lo-1-01568f92b2b1.m4a",
+      "hash": "01568f92b2b1",
+      "seconds": 5.28
+    },
+    "lo-2": {
+      "file": "lo-2-ba8ab43aadf5.m4a",
+      "hash": "ba8ab43aadf5",
+      "seconds": 4.56
+    },
+    "lo-3": {
+      "file": "lo-3-62ffe453424a.m4a",
+      "hash": "62ffe453424a",
+      "seconds": 5.6
+    },
+    "cad-hi-1": {
+      "file": "cad-hi-1-03f43c9d1a58.m4a",
+      "hash": "03f43c9d1a58",
+      "seconds": 4.16
+    },
+    "cad-hi-2": {
+      "file": "cad-hi-2-9a3b460eeb1d.m4a",
+      "hash": "9a3b460eeb1d",
+      "seconds": 3.92
+    },
+    "cad-lo-1": {
+      "file": "cad-lo-1-fdb2d6a1b80d.m4a",
+      "hash": "fdb2d6a1b80d",
+      "seconds": 4.4
+    },
+    "cad-lo-2": {
+      "file": "cad-lo-2-41034b3bed75.m4a",
+      "hash": "41034b3bed75",
+      "seconds": 4.4
+    },
+    "ok-1": {
+      "file": "ok-1-5e2809e97074.m4a",
+      "hash": "5e2809e97074",
+      "seconds": 3.6
+    },
+    "ok-2": {
+      "file": "ok-2-6a4d3621a648.m4a",
+      "hash": "6a4d3621a648",
+      "seconds": 4.0
+    },
+    "hr-intro-1": {
+      "file": "hr-intro-1-f4e641ff9c6c.m4a",
+      "hash": "f4e641ff9c6c",
+      "seconds": 2.0
+    },
+    "hr-intro-2": {
+      "file": "hr-intro-2-1ce79c2bc11b.m4a",
+      "hash": "1ce79c2bc11b",
+      "seconds": 2.0
+    },
+    "hr-good-1": {
+      "file": "hr-good-1-cb00c80f0240.m4a",
+      "hash": "cb00c80f0240",
+      "seconds": 2.64
+    },
+    "hr-good-2": {
+      "file": "hr-good-2-c84a1452a93d.m4a",
+      "hash": "c84a1452a93d",
+      "seconds": 2.08
+    },
+    "hr-high-1": {
+      "file": "hr-high-1-b5e35b902b2e.m4a",
+      "hash": "b5e35b902b2e",
+      "seconds": 1.92
+    },
+    "hr-high-2": {
+      "file": "hr-high-2-30a87351da0c.m4a",
+      "hash": "30a87351da0c",
+      "seconds": 3.76
+    },
+    "hr-too-high-1": {
+      "file": "hr-too-high-1-4e742df630cd.m4a",
+      "hash": "4e742df630cd",
+      "seconds": 2.88
+    },
+    "hr-too-high-2": {
+      "file": "hr-too-high-2-cb306706f3c4.m4a",
+      "hash": "cb306706f3c4",
+      "seconds": 3.76
+    },
+    "pw-intro-1": {
+      "file": "pw-intro-1-36cc86db0e2e.m4a",
+      "hash": "36cc86db0e2e",
+      "seconds": 2.24
+    },
+    "pw-intro-2": {
+      "file": "pw-intro-2-d3efcb2c3ba4.m4a",
+      "hash": "d3efcb2c3ba4",
+      "seconds": 2.08
+    },
+    "pw-good-1": {
+      "file": "pw-good-1-3b2fcc13aa1a.m4a",
+      "hash": "3b2fcc13aa1a",
+      "seconds": 2.48
+    },
+    "pw-good-2": {
+      "file": "pw-good-2-608baefc3444.m4a",
+      "hash": "608baefc3444",
+      "seconds": 2.88
+    },
+    "pw-high-1": {
+      "file": "pw-high-1-1161bda7cefd.m4a",
+      "hash": "1161bda7cefd",
+      "seconds": 4.32
+    },
+    "pw-low-1": {
+      "file": "pw-low-1-8ed1e9052852.m4a",
+      "hash": "8ed1e9052852",
+      "seconds": 3.68
+    },
+    "unit-bpm": {
+      "file": "unit-bpm-2b7271dd4bc2.m4a",
+      "hash": "2b7271dd4bc2",
+      "seconds": 1.76
+    },
+    "unit-watts": {
+      "file": "unit-watts-1661c5fdd2dc.m4a",
+      "hash": "1661c5fdd2dc",
+      "seconds": 1.36
+    },
+    "unit-watts_and": {
+      "file": "unit-watts_and-df6b539b48c7.m4a",
+      "hash": "df6b539b48c7",
+      "seconds": 1.92
+    },
+    "unit-rpm": {
+      "file": "unit-rpm-d6729d82275d.m4a",
+      "hash": "d6729d82275d",
+      "seconds": 1.76
+    },
+    "s1-start": {
+      "file": "s1-start-552629f7f307.m4a",
+      "hash": "552629f7f307",
+      "seconds": 13.6
+    },
+    "s1-start-20": {
+      "file": "s1-start-20-c599f42ee3f1.m4a",
+      "hash": "c599f42ee3f1",
+      "seconds": 14.8
+    }
+  }
+}
