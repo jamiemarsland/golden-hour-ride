@@ -50,7 +50,10 @@
   #menu .foot { display: flex; justify-content: space-between; align-items: center; padding-top: 10px; border-top: 1px solid rgba(255,255,255,.16); }
   #menu #stop { background: #ffcf8f; border-color: #ffcf8f; color: #2a1b0a; font-weight: 600; text-shadow: none; padding: 8px 16px; }
   #menu #stop:hover { background: #ffdcae; }
-  #wx, #season { display: flex; flex-wrap: wrap; gap: 4px; }
+  #wx, #season, #pwait { display: flex; flex-wrap: wrap; gap: 4px; }
+  #menu #pacer { flex: 1; }
+  #h-pacer b { color: #ffcf8f; }
+  #done #d-pacer { margin: -6px 0 18px; padding-top: 14px; border-top: 1px solid rgba(255,255,255,.18); color: #ffcf8f; font-size: 14px; }
   #done { position: fixed; left: 50%; top: 46%; transform: translate(-50%, -50%); width: min(360px, calc(100vw - 36px)); box-sizing: border-box; padding: 22px 24px;
     border-radius: 18px; background: rgba(20,16,12,.8); border: 1px solid rgba(255,255,255,.3); backdrop-filter: blur(10px); color: #fff; text-align: center; }
   #done[hidden] { display: none; }
@@ -92,6 +95,7 @@
   <div><b id="h-gr">0.0</b><span>gradient %</span></div>
   <div><b id="h-di">0.00</b><span>km</span></div>
   <div id="h-gear" hidden><b id="h-ge">6</b><span>gear</span></div>
+  <div id="h-pacer" hidden><b id="h-gap">0 s</b><span id="h-pw2">pacer</span></div>
 </div>
 <div id="place"><button id="course" title="Choose where to ride. Changing place reloads the ride." aria-expanded="false">Course</button>
   <div id="places" hidden><button data-p="alps">Alps</button><button data-p="leckhampton">Leckhampton Hill</button></div>
@@ -109,6 +113,9 @@
   <div class="step" id="gearrow" hidden title="Virtual gear for a smart trainer. Also the . and , keys, or say “gear up”, “gear down” or “gear four”."><button id="gless" aria-label="Gear down">−</button><span id="gval">Gear 6</span><button id="gmore" aria-label="Gear up">+</button></div>
   <div class="step" id="hills" title="How much of each hill a smart trainer makes you feel. Turn it down if the climbs are too hard; 0 % is flat."><button id="hless" aria-label="Make hills easier">−</button><span id="hval">Hills 50 %</span><button id="hmore" aria-label="Make hills harder">+</button></div>
   <div class="step" id="pwrrow" title="Your power when no trainer is connected. Also the ↑ and ↓ keys."><span>Power</span><input id="pwr" type="range" min="0" max="600" step="5" value="220" aria-label="Power in watts"></div>
+  <div class="lab">Pacer</div>
+  <div class="step" title="A computer rider who holds this many watts on your road, obeying the same hills you do. The number at the bottom is the gap: minus when they are ahead of you, plus when you are ahead."><button id="pless" aria-label="Pacer easier">−</button><button id="pacer">Pacer: off</button><button id="pmore" aria-label="Pacer harder">+</button></div>
+  <span id="pwait" title="Waits for you: the pacer eases off when you fall more than 20 seconds behind. Strict: they ride away."><button data-wait="1" class="on">Waits for you</button><button data-wait="0">Strict</button></span>
   <div class="acts">
     <button id="skip" title="Jump 250 m up the road (→ key; ← goes back)">Skip 250 m ›</button>
     <button id="logbtn" title="Distance you have ridden, kept in this browser">Ride log</button>
@@ -152,6 +159,7 @@
     <div><b id="d-km">0.0</b><span>km</span></div><div><b id="d-time">0:00</b><span>riding time</span></div>
     <div><b id="d-pw">0</b><span>average watts</span></div><div><b id="d-up">0</b><span>metres climbed</span></div>
   </div>
+  <div id="d-pacer" hidden></div>
   <div class="acts"><button id="resume">Keep riding</button><button id="again">New ride</button></div>
   <div class="acts" style="margin-top:8px"><button id="tcx" title="Saves a .tcx file of this ride. Upload it at strava.com/upload/select, or to Garmin Connect, TrainingPeaks and others.">Download for Strava</button></div>
 </div>
@@ -1444,6 +1452,7 @@ const stopRide = () => {
   $('d-km').textContent = (st.dist / 1000).toFixed(st.dist < 99950 ? 2 : 1); $('d-time').textContent = clockTime(st.time);
   $('d-pw').textContent = st.time > 1 ? Math.round(st.work / st.time) : 0; $('d-up').textContent = Math.round(st.climb);
   $('tcx').hidden = st.track.length < 2;
+  const verdict = st.pacerResult ? st.pacerResult() : ''; $('d-pacer').hidden = !verdict; $('d-pacer').textContent = verdict;
   $('done').hidden = false; $('resume').focus();
   if (st.saveRide) st.saveRide();
 };
@@ -1501,7 +1510,7 @@ $('tcx').addEventListener('click', () => {
 const resumeRide = () => { st.stopped = false; $('done').hidden = true; if (st.v < 3) st.v = 3; };
 $('stop').addEventListener('click', stopRide);
 $('resume').addEventListener('click', resumeRide);
-$('again').addEventListener('click', () => { if (st.newRide) st.newRide(); st.dist = st.time = st.work = st.climb = 0; st.track = []; st.sampled = -1; resumeRide(); });
+$('again').addEventListener('click', () => { if (st.newRide) st.newRide(); st.dist = st.time = st.work = st.climb = 0; st.track = []; st.sampled = -1; if (st.pacerReset) st.pacerReset(); resumeRide(); });
 // the menu: one button, the M key, and a click on the scenery closes it. The ride log shares its corner, so only one is open.
 const setMenu = open => {
   $('menu').hidden = !open; $('menubtn').classList.toggle('on', open); $('menubtn').textContent = open ? '✕' : '⋯'; $('menubtn').setAttribute('aria-expanded', open);
@@ -1929,6 +1938,86 @@ addEventListener('pointerdown', startAudio); addEventListener('keydown', startAu
 /* ---------- ride ---------- */
 const MASS = 80, LANE = -1.75, clock = new THREE.Clock();
 const pose = mkPose(), ahead = mkPose(), probe = mkPose(), look = new V3(), sunNdc = new V3(), fwd = new V3();
+
+/* ---------- pacer: a computer rider who holds a steady power on the same road ----------
+   The pacer is kept as a gap in metres from you (plus = up the road), so skipping along the course carries them with you.
+   Their speed comes from the same sum as yours: power against gravity, rolling resistance and air drag for the same weight. */
+const pacer = { on: false, watts: 180, pw: 180, v: 6, gap: 0, wait: true, secs: 0, crank: 0, pose: mkPose(), rig: new THREE.Group(), legs: [] };
+{
+  const mat = (c, r = 0.8) => new THREE.MeshStandardMaterial({ color: c, roughness: r });
+  const dark = mat(0x16181b, 0.6), jersey = mat(0xffb347), skin = mat(0xc08a68), helmet = mat(0xf2f0ea, 0.5);
+  const Y = new V3(0, 1, 0), d = new V3(), stick = (m, a, b) => {            // lay a unit-high cylinder from a to b
+    d.subVectors(b, a); const len = d.length();
+    m.position.copy(a).addScaledVector(d, 0.5); m.scale.set(1, len, 1); m.quaternion.setFromUnitVectors(Y, d.divideScalar(len)); return m;
+  };
+  const tube = (a, b, r, m) => { const t = stick(new THREE.Mesh(new THREE.CylinderGeometry(r, r, 1, 8), m), new V3(...a), new V3(...b)); pacer.rig.add(t); return t; };
+  for (const z of [-0.5, 0.5]) { const w = new THREE.Mesh(new THREE.TorusGeometry(0.31, 0.03, 8, 22), dark); w.rotation.y = Math.PI / 2; w.position.set(0, 0.34, z); pacer.rig.add(w); }
+  const bb = [0, 0.3, -0.05], seat = [0, 0.95, -0.25], head = [0, 0.92, 0.38];
+  for (const [a, b] of [[bb, seat], [seat, head], [bb, head], [bb, [0, 0.34, -0.5]], [seat, [0, 0.34, -0.5]], [head, [0, 0.34, 0.5]]]) tube(a, b, 0.018, dark);
+  tube([-0.2, 0.98, 0.42], [0.2, 0.98, 0.42], 0.016, dark);                                     // handlebars
+  tube([0, 1.0, -0.22], [0, 1.27, 0.24], 0.15, jersey);                                         // back, bent over the bars
+  for (const x of [-0.17, 0.17]) tube([x, 1.26, 0.22], [x, 0.99, 0.42], 0.045, jersey);         // arms
+  const h = new THREE.Mesh(new THREE.SphereGeometry(0.115, 14, 10), helmet); h.position.set(0, 1.42, 0.36); pacer.rig.add(h);
+  for (const x of [-0.1, 0.1]) pacer.legs.push({ x, thigh: tube([x, 1, -0.2], [x, 0.6, 0.1], 0.065, dark), shin: tube([x, 0.6, 0.1], [x, 0.3, 0], 0.045, skin) });
+  pacer.rig.traverse(o => { if (o.isMesh) { o.castShadow = true; o.frustumCulled = false; } });
+  pacer.rig.visible = false; scene.add(pacer.rig);
+  const hip = new V3(), knee = new V3(), foot = new V3();
+  pacer.pedal = () => {                                    // each foot goes round the crank; the knee sits where thigh and shin can both reach
+    pacer.legs.forEach((leg, i) => {
+      const a = pacer.crank + i * Math.PI;
+      hip.set(leg.x, 1, -0.2); foot.set(leg.x, 0.3 + 0.17 * Math.cos(a), -0.05 + 0.17 * Math.sin(a));
+      const reach = Math.min(0.86, hip.distanceTo(foot)), up = Math.sqrt(Math.max(0, 0.44 * 0.44 - reach * reach / 4));
+      knee.lerpVectors(hip, foot, 0.5); knee.z += up * 0.9; knee.y += up * 0.3;
+      stick(leg.thigh, hip, knee); stick(leg.shin, knee, foot);
+    });
+  };
+  pacer.pedal();
+}
+const gapText = () => {                                    // seconds between you: minus when they are ahead, plus when you are
+  const t = Math.round(Math.abs(pacer.secs)); if (!t) return '0 s';
+  return (pacer.secs > 0 ? '−' : '+') + (t < 100 ? t + ' s' : Math.floor(t / 60) + ':' + String(t % 60).padStart(2, '0'));
+};
+const pacerLabel = () => { $('h-pw2').textContent = 'pacer · ' + pacer.watts + ' W'; $('pacer').textContent = pacer.on ? 'Pacer: ' + pacer.watts + ' W' : 'Pacer: off'; $('pacer').classList.toggle('on', pacer.on); };
+const setPacer = on => {
+  pacer.on = on;
+  if (on) {                                                // they start beside you, at your speed; the first time, at about your own effort
+    if (!pacer.set) { pacer.set = true; pacer.watts = Math.max(50, Math.min(500, Math.round((st.time > 60 ? st.work / st.time : st.power) / 10) * 10)); }
+    pacer.gap = 6; pacer.v = st.v; pacer.pw = pacer.watts; pacer.secs = 0;   // a bike length or two up the road, where you can see them
+  }
+  pacer.rig.visible = on;
+  pacerLabel();
+};
+const setPacerWatts = w => { pacer.watts = Math.max(50, Math.min(500, Math.round(w / 10) * 10)); pacer.set = true; pacerLabel(); };
+$('pacer').addEventListener('click', () => setPacer(!pacer.on));
+$('pless').addEventListener('click', () => setPacerWatts(pacer.watts - 10));
+$('pmore').addEventListener('click', () => setPacerWatts(pacer.watts + 10));
+for (const b of $('pwait').children) b.addEventListener('click', () => { pacer.wait = b.dataset.wait === '1'; for (const c of $('pwait').children) c.classList.toggle('on', c === b); });
+st.pacer = pacer; st.setPacer = setPacer;                  // for testing
+st.pacerReset = () => { if (pacer.on) setPacer(true); };
+st.pacerResult = () => {
+  if (!pacer.on || st.dist < 100) return '';
+  const t = Math.round(Math.abs(pacer.secs)), by = t < 100 ? t + ' s' : Math.floor(t / 60) + ' min ' + (t % 60) + ' s';
+  return !t ? `Level with the ${pacer.watts} W pacer` : pacer.secs > 0 ? `The ${pacer.watts} W pacer is ${by} ahead of you` : `You are ${by} ahead of the ${pacer.watts} W pacer`;
+};
+const tagAt = new V3();                                   // (their watts sit under the gap, bottom left; the amber jersey is the only marker on the road)
+function stepPacer(dt) {
+  if (!pacer.on) return;
+  const pp = at(st.s + pacer.gap, pacer.pose);
+  if (!st.stopped) {
+    // a friendly pacer eases to just over half power while you are more than 20 seconds behind
+    const want = pacer.wait && pacer.secs > 20 ? pacer.watts * 0.55 : pacer.watts;
+    pacer.pw += (want - pacer.pw) * Math.min(1, dt * 1.5);
+    const v = pacer.v, slope = pp.t.y > 0 ? pp.t.y : pp.t.y * 0.5, brake = v > 15 ? MASS * 0.5 * (v - 15) : 0;
+    const force = pacer.pw / Math.max(v, 2) - MASS * 9.81 * (slope + 0.004) - 0.5 * 1.2 * 0.32 * v * v - brake;
+    pacer.v = Math.max(0.5, v + force / MASS * dt);
+    pacer.gap += (pacer.v - st.v) * dt;
+    pacer.secs = pacer.gap > 0 ? pacer.gap / Math.max(st.v, 1.5) : pacer.gap / Math.max(pacer.v, 1.5);
+    pacer.crank += dt * Math.PI * 2 * 85 / 60; pacer.pedal();
+  }
+  at(st.s + pacer.gap, pp);
+  pacer.rig.position.copy(pp.p).addScaledVector(pp.r, LANE + 0.9);   // a little nearer the middle of the road than you, so you can ride past
+  tagAt.copy(pacer.rig.position).add(pp.t); pacer.rig.lookAt(tagAt);
+}
 let lean = 0, phase = 0, grade = 0, huT = 0, first = true;
 // scenery mode's weather, in order, and how many seconds each one stays
 const SCENE_PLAN = XMAS ? [['snow', 280], ['mist', 100], ['snow', 180], ['golden', 95]] : [['golden', 200], ['mist', 110], ['rain', 130], ['overcast', 70], ['golden', 90]];
@@ -1977,6 +2066,7 @@ function tick() {
   const fov = 62 + Math.min(st.v, 20) * 0.75;
   if (Math.abs(fov - camera.fov) > 0.01) { camera.fov = fov; camera.updateProjectionMatrix(); }
 
+  stepPacer(dt);
   stepWeather(dt);
   rainU.uVel.value.copy(pose.t).multiplyScalar(st.v);
 
@@ -2012,6 +2102,7 @@ function tick() {
     $('h-gr').textContent = (grade >= 0 ? '+' : '') + grade.toFixed(1);
     $('h-di').textContent = (st.dist / 1000).toFixed(2);
     $('h-gear').hidden = $('gearrow').hidden = !bike.point; // gears only mean something while a trainer is taking the gradient
+    $('h-pacer').hidden = !pacer.on; if (pacer.on) $('h-gap').textContent = gapText();
     $('pwrrow').hidden = !!bike.dev;                        // and the power slider only while there is no trainer to read
   }
 
