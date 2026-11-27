@@ -12,6 +12,7 @@ Live: https://golden-hour-ride.space.fast/ · Leckhampton loop: https://golden-h
 - Hide everything on screen for a clean view: the Hide info button, the H key, or say "hide". Press H, click, or say "show" to bring it back.
 - Power from a slider, or from a Bluetooth trainer (Chrome or Edge). If the trainer supports resistance control (FTMS), the ride also sends it the road gradient, so climbs feel harder; the button shows "Trainer: power and gradient" or "Trainer: power only". The trainer feels half the road gradient by default; the − and + buttons beside the trainer button change that in steps of 10 %, from off to the full gradient, and the choice is kept in the browser (`?hills=` sets it for one visit). With voice on, say "easier" or "harder" to move it by 20 %, "flat" for off, or "full" for all of it. The last trainer is remembered: the button reads "Reconnect trainer" and rejoins it without the browser's device list where Chrome allows that, and a dropped connection is retried automatically.
 - Descents count half in the speed model and the rider brakes above 54 km/h, so downhill speed stays sensible.
+- Use your phone as a gear shifter: open Connect bike, choose Pair phone and scan the code. Hold Weather or Pacer on the phone for more choices. This needs the small relay in `remote/`, so it works on the hosted site but not when the ride is run locally.
 
 ## Run it locally
 
@@ -26,7 +27,8 @@ Then open http://localhost:8791/.
 - `index.html` – the whole ride.
 - `assets/` – textures and course data. `textures.js` is an embedded copy of the textures, used only when the page is opened straight from disk.
 - `tools/` – scripts that build the Leckhampton course data.
-- `deploy.sh` – publishes to Spacefast.
+- `remote/` – the phone gear shifter: the phone page, the laptop script and a small relay on Spacefast's Zero runtime. See `remote/README.md`.
+- `deploy.sh` – builds the published site from the ride plus `remote/`, and publishes it to Spacefast.
 
 ## Credits
 

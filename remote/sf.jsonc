@@ -1,0 +1,5 @@
+{
+  "$schema": "https://spacefast.com/schemas/sf.json",
+  "name": "golden-hour-ride",
+  "runtime": { "kind": "zero", "server": "server/index.ts", "client": "client/index.tsx" }
+}
