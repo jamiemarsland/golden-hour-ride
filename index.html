@@ -26,6 +26,8 @@
   #place button:hover, #ctl button:hover, #menu button:hover { background: rgba(20,16,12,.7); }
   #place button.on, #ctl button.on, #menu button.on { background: rgba(255,255,255,.3); border-color: #fff; }
   #bt.live::before { content: ''; display: inline-block; width: 7px; height: 7px; margin-right: 7px; border-radius: 50%; background: #6fd6ae; vertical-align: 1px; }
+  #heard { padding: 7px 13px 7px 11px; border-radius: 999px; background: rgba(20,16,12,.45); border: 1px solid rgba(255,207,143,.7); backdrop-filter: blur(6px); white-space: nowrap; }
+  #heard::before { content: ''; display: inline-block; width: 7px; height: 7px; margin-right: 7px; border-radius: 50%; background: #ffcf8f; vertical-align: 1px; }
   #menubtn { min-width: 38px; padding-left: 0; padding-right: 0; font-size: 14px; line-height: 13px; }
   #menu { position: fixed; top: 62px; right: 18px; width: 268px; max-height: calc(100vh - 90px); overflow: auto; box-sizing: border-box; padding: 14px;
     border-radius: 14px; background: rgba(20,16,12,.74); border: 1px solid rgba(255,255,255,.3); backdrop-filter: blur(8px);
@@ -102,7 +104,7 @@
 </div>
 <div id="ctl">
   <button id="bt">Connect trainer</button>
-  <button id="voice" title="Say: rain, mist, overcast, sunny, skip, back, stop, carry on, hide or show. For a smart trainer: gear up, gear down, a gear number such as “four” or “gear four”, easier, harder, flat, full">Voice: off</button>
+  <span id="heard" hidden title="Voice is listening. This shows the last thing it acted on."></span>
   <button id="menubtn" aria-label="Menu" aria-expanded="false" title="Weather, gears, hills and more (M key)">⋯</button>
 </div>
 <div id="menu" hidden>
@@ -116,6 +118,8 @@
   <div class="lab">Pacer</div>
   <div class="step" title="A computer rider who holds this many watts on your road, obeying the same hills you do. The number at the bottom is the gap: minus when they are ahead of you, plus when you are ahead."><button id="pless" aria-label="Pacer easier">−</button><button id="pacer">Pacer: off</button><button id="pmore" aria-label="Pacer harder">+</button></div>
   <span id="pwait" title="Waits for you: the pacer eases off when you fall more than 20 seconds behind. Strict: they ride away."><button data-wait="1" class="on">Waits for you</button><button data-wait="0">Strict</button></span>
+  <div class="lab">Controls</div>
+  <div class="acts" id="controls"><button id="voice" title="Say: rain, mist, overcast, sunny, skip, back, stop, carry on, hide or show. For a smart trainer: gear up, gear down, a gear number such as “four” or “gear four”, easier, harder, flat, full">Voice: off</button></div>
   <div class="acts">
     <button id="skip" title="Jump 250 m up the road (→ key; ← goes back)">Skip 250 m ›</button>
     <button id="logbtn" title="Distance you have ridden, kept in this browser">Ride log</button>
@@ -129,7 +133,7 @@
   <h3>Riding</h3>
   <p>Click <b>Connect trainer</b> and pedal. It needs Chrome or Edge. With no trainer, set your power with the slider in the menu.</p>
   <h3>Say it</h3>
-  <p>Turn on <b>Voice</b>, then say:</p>
+  <p>Turn on <b>Voice</b> in the menu, then say:</p>
   <dl>
     <dt>Weather</dt><dd>“rain”, “mist”, “overcast”, “sunny”</dd>
     <dt>Gears</dt><dd>“gear up”, “gear down”, “gear four”</dd>
@@ -1901,7 +1905,8 @@ setHills(HILLS * 100);
     [/\b(hide|hidden)\b/, 'Info hidden', () => setClean(true)],
     [/\b(show|info|display)\b/, 'Info shown', () => setClean(false)]];
   let rec = null, on = false, last = 0;
-  const label = t => { btn.textContent = t; btn.classList.toggle('on', on); };
+  // the Voice switch lives in the menu; while it is on, a quiet chip by the menu button shows what was last heard
+  const label = t => { btn.textContent = on ? 'Voice: on' : t; btn.classList.toggle('on', on); $('heard').hidden = !on; $('heard').textContent = t.replace('Voice: ', '').replace(/^listening$/, 'Listening'); };
   if (!SR) { btn.title = 'Voice control needs Chrome or Edge'; btn.addEventListener('click', () => label('Voice: needs Chrome')); }
   else btn.addEventListener('click', () => {
     if (on) { on = false; rec.stop(); label('Voice: off'); return; }
