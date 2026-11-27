@@ -15,6 +15,8 @@
   #hud div { text-align: left; min-width: 70px; }
   #hud b { display: block; font-size: 30px; font-weight: 300; letter-spacing: -.01em; }
   #hud span { font-size: 10px; letter-spacing: .16em; text-transform: uppercase; opacity: .75; }
+  #h-power.idle { pointer-events: auto; cursor: pointer; }        /* no trainer power: a click opens Connect bike */
+  #h-power.idle span { color: #ffc46b; opacity: 1; }
   /* top left: where you are. top right: trainer, voice and the menu. everything else lives in the menu. */
   #place { position: fixed; top: 18px; left: 18px; }
   #places { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; margin-top: 8px; }
@@ -103,7 +105,7 @@
 <body>
 <canvas id="c"></canvas>
 <div id="hud">
-  <div><b id="h-pw">220</b><span>watts</span></div>
+  <div id="h-power"><b id="h-pw">220</b><span id="h-pwl">watts</span></div>
   <div><b id="h-sp">0.0</b><span>km/h</span></div>
   <div><b id="h-gr">0.0</b><span>gradient %</span></div>
   <div><b id="h-di">0.00</b><span>km</span></div>
@@ -1550,10 +1552,26 @@ $('menubtn').addEventListener('click', () => setMenu($('menu').hidden));
 $('c').addEventListener('click', () => { setMenu(false); setDevices(false); $('help').hidden = true; $('places').hidden = true; if (!$('log').hidden) $('logbtn').click(); });
 addEventListener('keydown', e => { if ((e.key === 'm' || e.key === 'M') && !e.metaKey && !e.ctrlKey && !e.altKey) setMenu($('menu').hidden); });
 $('logbtn').addEventListener('click', () => setTimeout(() => { if (!$('log').hidden) { setMenu(false); setDevices(false); $('help').hidden = true; } }, 0));   // after the log has opened
-/* Smart trainer. Power is read from the Cycling Power service. If the trainer also has the Fitness Machine
+/* Smart trainer. Power is read from the Cycling Power service, or from FTMS when that is all it has. If the trainer has the Fitness Machine
    Service (FTMS), the game takes control of it and sends the road gradient, so climbs feel harder on the bike.
    Without FTMS, or if the trainer refuses control, it stays power only. */
-const FTMS = 0x1826, FTMS_POINT = 0x2AD9;          // service, and its Fitness Machine Control Point
+const FTMS = 0x1826, FTMS_POINT = 0x2AD9, FTMS_BIKE = 0x2AD2;   // service, its Control Point, and its Indoor Bike Data
+// Indoor Bike Data: a flags word, then only the fields the flags say are there, in a fixed order.
+// Power (bit 6) comes after speed (present when bit 0 is clear), average speed, cadence, average cadence,
+// distance (3 bytes) and resistance. Null when this packet carries no power.
+function bikeDataPower(d) {
+  if (d.byteLength < 2) return null;
+  const f = d.getUint16(0, true);
+  if (!(f & 0x40)) return null;
+  let o = 2;
+  if (!(f & 0x01)) o += 2;
+  if (f & 0x02) o += 2;
+  if (f & 0x04) o += 2;
+  if (f & 0x08) o += 2;
+  if (f & 0x10) o += 3;
+  if (f & 0x20) o += 2;
+  return o + 2 <= d.byteLength ? d.getInt16(o, true) : null;
+}
 const OP_CONTROL = 0x00, OP_SIM = 0x11, OP_REPLY = 0x80, OP_OK = 0x01;
 const bike = { dev: null, known: null, point: null, busy: false, sent: 0, at: 0, fails: 0, timer: 0, tries: 0 };
 // How much of the road's gradient the trainer is asked to feel. Half by default, like most indoor games,
@@ -1577,6 +1595,7 @@ const setHills = pct => {
 const GEARS = 12, GEAR_MID = 6, GEAR_STEP = 0.7;
 let GEAR = GEAR_MID;
 st.bike = bike; st.sendGrade = () => sendGrade();   // for testing without a trainer
+st.useTrainer = dev => useTrainer(dev);
 const setGear = n => {
   GEAR = Math.max(1, Math.min(GEARS, Math.round(n)));
   $('h-ge').textContent = GEAR; $('gval').textContent = 'Gear ' + GEAR;
@@ -1657,10 +1676,21 @@ async function useTrainer(dev) {
   let server;
   try { server = await within(dev.gatt.connect(), 8000); }
   catch (err) { try { dev.gatt.disconnect(); } catch {} throw err; }
-  const svc = await server.getPrimaryService('cycling_power');
-  const ch = await svc.getCharacteristic('cycling_power_measurement');
+  // Power comes from the Cycling Power service when the trainer has it; some trainers and smart bikes only
+  // report it inside FTMS's Indoor Bike Data, so that is the fallback.
+  let ch, read;
+  try {
+    ch = await (await server.getPrimaryService('cycling_power')).getCharacteristic('cycling_power_measurement');
+    read = d => d.getInt16(2, true);
+  } catch (err) {
+    try { ch = await (await server.getPrimaryService(FTMS)).getCharacteristic(FTMS_BIKE); read = bikeDataPower; }
+    catch (err2) { try { dev.gatt.disconnect(); } catch {} throw new Error('no power'); }
+  }
   await ch.startNotifications();
-  ch.addEventListener('characteristicvaluechanged', e => { st.trainer = true; setTarget(e.target.value.getInt16(2, true)); });
+  ch.addEventListener('characteristicvaluechanged', e => {
+    const w = read(e.target.value); if (w === null) return;   // an Indoor Bike Data packet without power in it
+    st.trainer = true; bike.heard = performance.now(); setTarget(w);
+  });
   if (!watched.has(dev)) {
     watched.add(dev);
     dev.addEventListener('gattserverdisconnected', () => {
@@ -1668,7 +1698,7 @@ async function useTrainer(dev) {
       rejoin(dev);
     });
   }
-  bike.dev = bike.known = dev; bike.tries = 0; $('bt').title = dev.name || '';
+  bike.dev = bike.known = dev; bike.tries = 0; bike.since = performance.now(); bike.heard = 0; $('bt').title = dev.name || '';
   try { localStorage.setItem(TRAINER_KEY, JSON.stringify({ id: dev.id, name: dev.name || '' })); } catch {}
   await ftmsStart(server);
   if (dev.gatt.connected) btLabel();
@@ -1694,6 +1724,15 @@ async function knownTrainers() {
   return list;
 }
 
+// a plain reason for a trainer that would not connect
+const whyNot = err => {
+  const m = String(err && err.message || err);
+  if (err && err.name === 'NotFoundError') return 'Not connected';                        // the list was closed without picking one
+  if (m === 'no power') return "This trainer doesn't share its power with the browser";
+  if (m === 'timed out') return "No answer. Is it awake, and not in use by Zwift or another app?";
+  return "Couldn't connect. Close Zwift or any other app using it, then try again";
+};
+$('h-power').addEventListener('click', () => { if ($('h-power').classList.contains('idle')) setDevices(true); });
 $('bt').addEventListener('click', async () => {
   if (!navigator.bluetooth) { $('ds-trainer').textContent = 'Needs Chrome or Edge'; return; }
   if (bike.busyJoin) return;
@@ -1712,7 +1751,11 @@ $('bt').addEventListener('click', async () => {
     $('ds-trainer').textContent = 'Connecting…';
     if (bike.dev && bike.dev !== dev) { const old = bike.dev; bike.known = dev; try { old.gatt.disconnect(); } catch {} }
     await useTrainer(dev);
-  } catch (err) { if (!bike.dev) { clearInterval(bike.timer); bike.point = null; } btLabel(); }
+  } catch (err) {
+    if (!bike.dev) { clearInterval(bike.timer); bike.point = null; }
+    btLabel();
+    if (!bike.dev) $('ds-trainer').textContent = whyNot(err);   // say what went wrong, not just "Not connected"
+  }
   finally { bike.busyJoin = false; }
 });
 btLabel();
@@ -2141,6 +2184,10 @@ function tick() {
     $('h-gear').hidden = $('gearrow').hidden = !bike.point; // gears only mean something while a trainer is taking the gradient
     $('h-pacer').hidden = !pacer.on; if (pacer.on) $('h-gap').textContent = gapText();
     $('pwrrow').hidden = !!bike.dev;                        // and the power slider only while there is no trainer to read
+    // say when the watts are not the rider's: no trainer at all, or one that has sent no power yet
+    const mute = bike.dev && !bike.heard && performance.now() - bike.since > 5000;
+    const pl = !bike.dev ? 'watts · no trainer' : mute ? 'watts · no reading' : 'watts';
+    if ($('h-pwl').textContent !== pl) { $('h-pwl').textContent = pl; $('h-power').classList.toggle('idle', pl !== 'watts'); }
   }
 
   composer.render();
