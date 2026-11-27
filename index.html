@@ -39,7 +39,7 @@
   #devices button:hover { background: rgba(255,255,255,.25); }
   #toast { position: fixed; left: 50%; top: 22px; transform: translateX(-50%); padding: 8px 16px; border-radius: 999px; background: rgba(20,16,12,.8); border: 1px solid #ffcf8f;
     color: #fff; font-size: 13px; letter-spacing: .04em; pointer-events: none; opacity: 0; transition: opacity .25s; white-space: nowrap; }
-  #menubtn { min-width: 38px; padding-left: 0; padding-right: 0; font-size: 14px; line-height: 13px; }
+  #menubtn { min-width: 38px; height: 30px; padding: 0; font-size: 13px; line-height: 13px; display: inline-flex; align-items: center; justify-content: center; }
   #menu { position: fixed; top: 62px; right: 18px; width: 268px; max-height: calc(100vh - 90px); overflow: auto; box-sizing: border-box; padding: 14px;
     border-radius: 14px; background: rgba(20,16,12,.74); border: 1px solid rgba(255,255,255,.3); backdrop-filter: blur(8px);
     display: flex; flex-direction: column; gap: 10px; }
@@ -115,7 +115,7 @@
 </div>
 <div id="ctl">
   <button id="devbtn" aria-expanded="false" title="Connect your bike, and turn on voice control"><span class="dd" id="dd-trainer"></span><span class="dd" id="dd-voice"></span><span id="devlabel">Connect bike</span></button>
-  <button id="menubtn" aria-label="Menu" aria-expanded="false" title="Weather, gears, hills and more (M key)">⋯</button>
+  <button id="menubtn" aria-label="Settings" aria-expanded="false" title="Settings: season, weather, gears, hills, pacer and more (M key)"><!-- cog icon from Feather, MIT licence --><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>
 </div>
 <div id="menu" hidden>
   <div class="lab">Season</div>
@@ -162,7 +162,7 @@
     <dt><kbd>↑</kbd> <kbd>↓</kbd></dt><dd>Power, with no trainer</dd>
     <dt><kbd>→</kbd> <kbd>←</kbd></dt><dd>Skip 250 m ahead or back</dd>
     <dt><kbd>H</kbd></dt><dd>Hide everything</dd>
-    <dt><kbd>M</kbd></dt><dd>Menu</dd>
+    <dt><kbd>M</kbd></dt><dd>Settings</dd>
   </dl>
   <h3>Gears and hills</h3>
   <p>Both need a smart trainer. A gear changes how hard the pedals feel. Hills sets how much of each slope you feel: 50 % makes a 10 % climb pedal like 5 %.</p>
@@ -1538,8 +1538,9 @@ const setDevices = open => {
 };
 $('devbtn').addEventListener('click', () => setDevices($('devices').hidden));
 st.setDevices = setDevices;
+const COG = $('menubtn').innerHTML;                       // the settings cog, kept to put back when the menu closes
 const setMenu = open => {
-  $('menu').hidden = !open; $('menubtn').classList.toggle('on', open); $('menubtn').textContent = open ? '✕' : '⋯'; $('menubtn').setAttribute('aria-expanded', open);
+  $('menu').hidden = !open; $('menubtn').classList.toggle('on', open); $('menubtn').innerHTML = open ? '✕' : COG; $('menubtn').setAttribute('aria-expanded', open);
   if (open && !$('log').hidden) $('logbtn').click();
   if (open) { $('help').hidden = true; setDevices(false); }
 };
@@ -1706,6 +1707,7 @@ $('bt').addEventListener('click', async () => {
     }
     // nothing remembered, or it did not answer: show the browser's list of trainers nearby
     btLabel();
+    $('ds-trainer').textContent = 'Pick your trainer from the list, then press Pair';   // the browser's own box opens next; we cannot restyle it, only introduce it
     const dev = await navigator.bluetooth.requestDevice({ filters: [{ services: ['cycling_power'] }, { services: [FTMS] }], optionalServices: ['cycling_power', FTMS] });
     $('ds-trainer').textContent = 'Connecting…';
     if (bike.dev && bike.dev !== dev) { const old = bike.dev; bike.known = dev; try { old.gatt.disconnect(); } catch {} }
