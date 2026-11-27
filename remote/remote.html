@@ -23,7 +23,6 @@
   #sheet button { padding: 16px 8px; font-size: 16px; } #sheet button.sel { border-color: #ffcf8f; color: #ffcf8f; }
   #sheet .big { font-size: 34px; font-weight: 300; text-align: center; font-variant-numeric: tabular-nums; }
   #sheet .done { background: none; opacity: .8; }
-  #hint { font-size: 11px; letter-spacing: .08em; opacity: .5; text-align: center; }
   #status { font-size: 13px; letter-spacing: .06em; opacity: .75; text-align: center; min-height: 18px; }
   .gears { flex: 1; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
   .small { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
@@ -47,7 +46,6 @@
     <button data-a="pacer" id="b-pacer">Pacer<small id="s-pacer">off</small></button>
     <button data-a="stop" id="stop"><span id="s-stop">Stop</span></button>
   </div>
-  <div id="hint">Hold Weather or Pacer for more</div>
 </main>
 <div id="sheet" hidden><div class="in"><h2 id="sh-title"></h2><div id="sh-body"></div><button class="done" id="sh-done">Done</button></div></div>
 <script>
@@ -86,7 +84,8 @@
     $('sheet').hidden = false;
   };
   const closeSheet = () => { $('sheet').hidden = true; sheetFor = ''; };
-  $('sh-done').addEventListener('click', closeSheet);
+  // Done answers a fresh touch, not a click: the sheet opens under the finger, and lifting it must not close the sheet
+  $('sh-done').addEventListener('pointerdown', e => { e.preventDefault(); closeSheet(); });
   $('sheet').addEventListener('pointerdown', e => { if (e.target === $('sheet')) closeSheet(); });
   const refresh = async () => {
     try {
@@ -102,21 +101,12 @@
   else {
     send('hello');
     const fire = b => { if (navigator.vibrate) navigator.vibrate(15); if (b.dataset.a === 'gear+' || b.dataset.a === 'gear-') shiftNow(b.dataset.a === 'gear+'); b.classList.add('hit'); setTimeout(() => b.classList.remove('hit'), 140); send(b.dataset.a); soon(); };
-    for (const b of document.querySelectorAll('main button')) {
-      const hold = b.dataset.a === 'weather' || b.dataset.a === 'pacer';
-      let timer = 0, held = false;
-      // gears and stop act the instant you touch them; Weather and Pacer wait for you to let go, so a hold can open their sheet
-      b.addEventListener('pointerdown', e => {
-        e.preventDefault();
-        if (!hold) return fire(b);
-        held = false; timer = setTimeout(() => { held = true; if (navigator.vibrate) navigator.vibrate([10, 40, 10]); sheet(b.dataset.a); }, 450);
-      });
-      if (hold) {
-        b.addEventListener('pointerup', () => { clearTimeout(timer); if (!held) fire(b); });
-        b.addEventListener('pointercancel', () => clearTimeout(timer)); b.addEventListener('pointerleave', () => clearTimeout(timer));
-        b.addEventListener('contextmenu', e => e.preventDefault());
-      }
-    }
+    // gears and Stop act the instant you touch them; a tap on Weather or Pacer opens its choices
+    for (const b of document.querySelectorAll('main button')) b.addEventListener('pointerdown', e => {
+      e.preventDefault();
+      if (b.dataset.a === 'weather' || b.dataset.a === 'pacer') { if (navigator.vibrate) navigator.vibrate(10); sheet(b.dataset.a); }
+      else fire(b);
+    });
     soon(); setInterval(() => { if (!document.hidden) refresh(); }, 4000);
     // keep the screen awake while the remote is open, where the phone allows it
     const awake = () => navigator.wakeLock && navigator.wakeLock.request('screen').catch(() => {});
