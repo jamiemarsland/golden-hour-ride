@@ -68,6 +68,9 @@
   #wx, #season, #pwait { display: flex; flex-wrap: wrap; gap: 4px; }
   #menu #pacer { flex: 1; }
   #h-pacer b { color: #ffcf8f; }
+  #menu #ghost { flex: 1; } #menu #ghost:disabled { opacity: .55; cursor: default; }
+  #h-ghost b { color: #cfe4ff; }
+  #done #d-ghost { margin: -6px 0 18px; padding-top: 14px; border-top: 1px solid rgba(255,255,255,.18); color: #cfe4ff; font-size: 14px; }
   #done #d-pacer { margin: -6px 0 18px; padding-top: 14px; border-top: 1px solid rgba(255,255,255,.18); color: #ffcf8f; font-size: 14px; }
   #done { position: fixed; left: 50%; top: 46%; transform: translate(-50%, -50%); width: min(360px, calc(100vw - 36px)); box-sizing: border-box; padding: 22px 24px;
     border-radius: 18px; background: rgba(20,16,12,.8); border: 1px solid rgba(255,255,255,.3); backdrop-filter: blur(10px); color: #fff; text-align: center; }
@@ -111,6 +114,7 @@
   <div><b id="h-di">0.00</b><span>km</span></div>
   <div id="h-gear" hidden><b id="h-ge">6</b><span>gear</span></div>
   <div id="h-pacer" hidden><b id="h-gap">0 s</b><span id="h-pw2">pacer</span></div>
+  <div id="h-ghost" hidden><b id="h-ggap">0 s</b><span>ghost</span></div>
 </div>
 <div id="place"><button id="course" title="Choose where to ride. Changing place reloads the ride." aria-expanded="false">Course</button>
   <div id="places" hidden><button data-p="alps">Alps</button><button data-p="leckhampton">Leckhampton Hill</button></div>
@@ -127,9 +131,10 @@
   <div class="step" id="gearrow" hidden title="Virtual gear for a smart trainer. Also the . and , keys, or say “gear up”, “gear down” or “gear four”."><button id="gless" aria-label="Gear down">−</button><span id="gval">Gear 6</span><button id="gmore" aria-label="Gear up">+</button></div>
   <div class="step" id="hills" title="How much of each hill a smart trainer makes you feel. Turn it down if the climbs are too hard; 0 % is flat."><button id="hless" aria-label="Make hills easier">−</button><span id="hval">Hills 50 %</span><button id="hmore" aria-label="Make hills harder">+</button></div>
   <div class="step" id="pwrrow" title="Your power when no trainer is connected. Also the ↑ and ↓ keys."><span>Power</span><input id="pwr" type="range" min="0" max="600" step="5" value="220" aria-label="Power in watts"></div>
-  <div class="lab">Pacer</div>
+  <div class="lab">Pacer and ghost</div>
   <div class="step" title="A computer rider who holds this many watts on your road, obeying the same hills you do. The number at the bottom is the gap: minus when they are ahead of you, plus when you are ahead."><button id="pless" aria-label="Pacer easier">−</button><button id="pacer">Pacer: off</button><button id="pmore" aria-label="Pacer harder">+</button></div>
   <span id="pwait" title="Waits for you: the pacer eases off when you fall more than 20 seconds behind. Strict: they ride away."><button data-wait="1" class="on">Waits for you</button><button data-wait="0">Strict</button></span>
+  <div class="step"><button id="ghost" disabled>Ghost: none yet</button></div>
   <div class="acts">
     <button id="skip" title="Jump 250 m up the road (→ key; ← goes back)">Skip 250 m ›</button>
     <button id="logbtn" title="Distance you have ridden, kept in this browser">Ride log</button>
@@ -154,6 +159,7 @@
     <dt>Gears</dt><dd>“gear up”, “gear down”, “gear four”</dd>
     <dt>Hills</dt><dd>“easier”, “harder”</dd>
     <dt>Move</dt><dd>“skip”, “back”</dd>
+    <dt>Ghost</dt><dd>“ghost”, “ghost off”</dd>
     <dt>Finish</dt><dd>“stop”, “carry on”</dd>
     <dt>Screen</dt><dd>“hide”, “show”</dd>
   </dl>
@@ -168,6 +174,8 @@
   </dl>
   <h3>Gears and hills</h3>
   <p>Both need a smart trainer. A gear changes how hard the pedals feel. Hills sets how much of each slope you feel: 50 % makes a 10 % climb pedal like 5 %.</p>
+  <h3>Ghost</h3>
+  <p>Ride a course for five minutes or more and stop, and your fastest ride there is kept. Turn on <b>Ghost</b> in Settings to race it: a see-through rider sets off beside you and rides it again.</p>
   <h3>Finishing</h3>
   <p><b>Stop ride</b> shows what you did. From there you can download the ride and upload it to Strava.</p>
   <button id="helpclose">Close</button>
@@ -179,6 +187,7 @@
     <div><b id="d-pw">0</b><span>average watts</span></div><div><b id="d-up">0</b><span>metres climbed</span></div>
   </div>
   <div id="d-pacer" hidden></div>
+  <div id="d-ghost" hidden></div>
   <div class="acts"><button id="resume">Keep riding</button><button id="again">New ride</button></div>
   <div class="acts" style="margin-top:8px"><button id="tcx" title="Saves a .tcx file of this ride. Upload it at strava.com/upload/select, or to Garmin Connect, TrainingPeaks and others.">Download for Strava</button></div>
 </div>
@@ -1472,6 +1481,10 @@ const stopRide = () => {
   $('d-pw').textContent = st.time > 1 ? Math.round(st.work / st.time) : 0; $('d-up').textContent = Math.round(st.climb);
   $('tcx').hidden = st.track.length < 2;
   const verdict = st.pacerResult ? st.pacerResult() : ''; $('d-pacer').hidden = !verdict; $('d-pacer').textContent = verdict;
+  // the ghost's verdict first (against the ghost you rode with), then whether this ride is the new ghost
+  const spooked = st.ghostResult ? st.ghostResult() : '', best = st.keepGhost ? st.keepGhost() : false;
+  const gtext = [spooked, best ? 'Your fastest ride here: it is your ghost now' : ''].filter(Boolean).join('. ');
+  $('d-ghost').hidden = !gtext; $('d-ghost').textContent = gtext;
   $('done').hidden = false; $('resume').focus();
   if (st.saveRide) st.saveRide();
 };
@@ -1529,7 +1542,7 @@ $('tcx').addEventListener('click', () => {
 const resumeRide = () => { st.stopped = false; $('done').hidden = true; if (st.v < 3) st.v = 3; };
 $('stop').addEventListener('click', stopRide);
 $('resume').addEventListener('click', resumeRide);
-$('again').addEventListener('click', () => { if (st.newRide) st.newRide(); st.dist = st.time = st.work = st.climb = 0; st.track = []; st.sampled = -1; if (st.pacerReset) st.pacerReset(); resumeRide(); });
+$('again').addEventListener('click', () => { if (st.newRide) st.newRide(); st.dist = st.time = st.work = st.climb = 0; st.track = []; st.sampled = -1; if (st.pacerReset) st.pacerReset(); if (st.ghostReset) st.ghostReset(); resumeRide(); });
 // the menu: one button, the M key, and a click on the scenery closes it. The ride log shares its corner, so only one is open.
 let toastT = 0;
 const toast = t => { $('toast').textContent = t; $('toast').style.opacity = 1; clearTimeout(toastT); toastT = setTimeout(() => { $('toast').style.opacity = 0; }, 1600); };
@@ -1967,6 +1980,8 @@ setHills(HILLS * 100);
     [/\b(mist|misty|fog|foggy)\b/, NOW, () => setWeather('mist')],
     [/\b(overcast|cloud|clouds|cloudy|grey|gray)\b/, NOW, () => setWeather('overcast')],
     [/\b(golden|sun|sunny|sunshine|sunset|clear|evening)\b/, NOW, () => setWeather('golden')],
+    [/\bghost off\b/, () => setGhost(false), () => {}],
+    [/\bghost\b/, () => bestGhost ? setGhost(true) : 'No ghost yet', () => {}],
     [/\b(stop|pause|finish)\b/, 'Stopped', () => stopRide()],
     [/\b(keep riding|carry on|resume|continue|start)\b/, 'Riding', () => resumeRide()],
     [/\b(skip|forward|ahead)\b/, 'Skip ahead', () => skip(250)],
@@ -2021,36 +2036,40 @@ const pose = mkPose(), ahead = mkPose(), probe = mkPose(), look = new V3(), sunN
    The pacer is kept as a gap in metres from you (plus = up the road), so skipping along the course carries them with you.
    Their speed comes from the same sum as yours: power against gravity, rolling resistance and air drag for the same weight. */
 const pacer = { on: false, watts: 180, pw: 180, v: 6, gap: 0, wait: true, secs: 0, crank: 0, pose: mkPose(), rig: new THREE.Group(), legs: [] };
-{
-  const mat = (c, r = 0.8) => new THREE.MeshStandardMaterial({ color: c, roughness: r });
+// A rider on a bike, built from tubes. The pacer is solid with an amber jersey; the ghost is the same rider, see-through.
+function buildRider(who, ghost) {
+  const mat = (c, r = 0.8) => ghost
+    ? new THREE.MeshStandardMaterial({ color: 0xcfe6ff, emissive: 0x3f7fd0, emissiveIntensity: 0.9, roughness: 0.5, transparent: true, opacity: 0.62, depthWrite: false })
+    : new THREE.MeshStandardMaterial({ color: c, roughness: r });
   const dark = mat(0x16181b, 0.6), jersey = mat(0xffb347), skin = mat(0xc08a68), helmet = mat(0xf2f0ea, 0.5);
   const Y = new V3(0, 1, 0), d = new V3(), stick = (m, a, b) => {            // lay a unit-high cylinder from a to b
     d.subVectors(b, a); const len = d.length();
     m.position.copy(a).addScaledVector(d, 0.5); m.scale.set(1, len, 1); m.quaternion.setFromUnitVectors(Y, d.divideScalar(len)); return m;
   };
-  const tube = (a, b, r, m) => { const t = stick(new THREE.Mesh(new THREE.CylinderGeometry(r, r, 1, 8), m), new V3(...a), new V3(...b)); pacer.rig.add(t); return t; };
-  for (const z of [-0.5, 0.5]) { const w = new THREE.Mesh(new THREE.TorusGeometry(0.31, 0.03, 8, 22), dark); w.rotation.y = Math.PI / 2; w.position.set(0, 0.34, z); pacer.rig.add(w); }
+  const tube = (a, b, r, m) => { const t = stick(new THREE.Mesh(new THREE.CylinderGeometry(r, r, 1, 8), m), new V3(...a), new V3(...b)); who.rig.add(t); return t; };
+  for (const z of [-0.5, 0.5]) { const w = new THREE.Mesh(new THREE.TorusGeometry(0.31, 0.03, 8, 22), dark); w.rotation.y = Math.PI / 2; w.position.set(0, 0.34, z); who.rig.add(w); }
   const bb = [0, 0.3, -0.05], seat = [0, 0.95, -0.25], head = [0, 0.92, 0.38];
   for (const [a, b] of [[bb, seat], [seat, head], [bb, head], [bb, [0, 0.34, -0.5]], [seat, [0, 0.34, -0.5]], [head, [0, 0.34, 0.5]]]) tube(a, b, 0.018, dark);
   tube([-0.2, 0.98, 0.42], [0.2, 0.98, 0.42], 0.016, dark);                                     // handlebars
   tube([0, 1.0, -0.22], [0, 1.27, 0.24], 0.15, jersey);                                         // back, bent over the bars
   for (const x of [-0.17, 0.17]) tube([x, 1.26, 0.22], [x, 0.99, 0.42], 0.045, jersey);         // arms
-  const h = new THREE.Mesh(new THREE.SphereGeometry(0.115, 14, 10), helmet); h.position.set(0, 1.42, 0.36); pacer.rig.add(h);
-  for (const x of [-0.1, 0.1]) pacer.legs.push({ x, thigh: tube([x, 1, -0.2], [x, 0.6, 0.1], 0.065, dark), shin: tube([x, 0.6, 0.1], [x, 0.3, 0], 0.045, skin) });
-  pacer.rig.traverse(o => { if (o.isMesh) { o.castShadow = true; o.frustumCulled = false; } });
-  pacer.rig.visible = false; scene.add(pacer.rig);
+  const h = new THREE.Mesh(new THREE.SphereGeometry(0.115, 14, 10), helmet); h.position.set(0, 1.42, 0.36); who.rig.add(h);
+  for (const x of [-0.1, 0.1]) who.legs.push({ x, thigh: tube([x, 1, -0.2], [x, 0.6, 0.1], 0.065, dark), shin: tube([x, 0.6, 0.1], [x, 0.3, 0], 0.045, skin) });
+  who.rig.traverse(o => { if (o.isMesh) { o.castShadow = !ghost; o.frustumCulled = false; } });   // a ghost casts no shadow
+  who.rig.visible = false; scene.add(who.rig);
   const hip = new V3(), knee = new V3(), foot = new V3();
-  pacer.pedal = () => {                                    // each foot goes round the crank; the knee sits where thigh and shin can both reach
-    pacer.legs.forEach((leg, i) => {
-      const a = pacer.crank + i * Math.PI;
+  who.pedal = () => {                                      // each foot goes round the crank; the knee sits where thigh and shin can both reach
+    who.legs.forEach((leg, i) => {
+      const a = who.crank + i * Math.PI;
       hip.set(leg.x, 1, -0.2); foot.set(leg.x, 0.3 + 0.17 * Math.cos(a), -0.05 + 0.17 * Math.sin(a));
       const reach = Math.min(0.86, hip.distanceTo(foot)), up = Math.sqrt(Math.max(0, 0.44 * 0.44 - reach * reach / 4));
       knee.lerpVectors(hip, foot, 0.5); knee.z += up * 0.9; knee.y += up * 0.3;
       stick(leg.thigh, hip, knee); stick(leg.shin, knee, foot);
     });
   };
-  pacer.pedal();
+  who.pedal();
 }
+buildRider(pacer, false);
 const gapText = () => {                                    // seconds between you: minus when they are ahead, plus when you are
   const t = Math.round(Math.abs(pacer.secs)); if (!t) return '0 s';
   return (pacer.secs > 0 ? '−' : '+') + (t < 100 ? t + ' s' : Math.floor(t / 60) + ':' + String(t % 60).padStart(2, '0'));
@@ -2095,6 +2114,75 @@ function stepPacer(dt) {
   at(st.s + pacer.gap, pp);
   pacer.rig.position.copy(pp.p).addScaledVector(pp.r, LANE + 0.9);   // a little nearer the middle of the road than you, so you can ride past
   tagAt.copy(pacer.rig.position).add(pp.t); pacer.rig.lookAt(tagAt);
+}
+
+/* ---------- ghost: your fastest ride on this course, ridden again beside you ----------
+   Every ride is traced as its distance at each whole second. When you stop (or leave) after at least five minutes, and
+   the ride was faster on average than the ghost kept for this course, it becomes the new ghost (kept in this browser).
+   Turned on, the ghost sets off beside you and replays that ride second by second. Like the pacer it is kept as a gap,
+   so skipping along the course carries it with you, and it waits while you are stopped. */
+const GHOST_KEY = 'golden-hour-ride-ghost-' + COURSE, GHOST_MIN = 300, GHOST_MAX = 10800;   // five minutes at least, three hours at most
+const ghost = { on: false, rec: null, t0: 0, d0: 0, gap: 0, secs: 0, done: false, crank: 0, pose: mkPose(), rig: new THREE.Group(), legs: [] };
+buildRider(ghost, true);
+const trace = [];                                        // this ride: metres ridden at second 0, 1, 2, ...
+let traceId = new Date().toISOString();                  // which ride the trace is, so leaving the tab mid-ride and stopping later updates one ghost
+const loadGhost = () => { try { const g = JSON.parse(localStorage.getItem(GHOST_KEY)); return g && Array.isArray(g.d) && g.d.length > GHOST_MIN ? g : null; } catch { return null; } };
+let bestGhost = loadGhost();
+const ghostKmh = d => (d[d.length - 1] - d[0]) / (d.length - 1) * 3.6;
+// keep this ride as the ghost if it is long enough and faster than the one kept; true when it was
+const keepGhost = () => {
+  if (trace.length - 1 < GHOST_MIN) return false;
+  const same = bestGhost && bestGhost.t === traceId;       // this ride is already the ghost: keep the longer trace of it
+  if (bestGhost && (same ? trace.length <= bestGhost.d.length : ghostKmh(trace) <= ghostKmh(bestGhost.d))) return false;
+  bestGhost = { t: traceId, d: trace.slice() };
+  try { localStorage.setItem(GHOST_KEY, JSON.stringify(bestGhost)); } catch {}
+  ghostLabel(); return true;
+};
+addEventListener('pagehide', keepGhost);
+document.addEventListener('visibilitychange', () => { if (document.hidden) keepGhost(); });
+const ghostLabel = () => {
+  const b = $('ghost');
+  b.disabled = !bestGhost && !ghost.on;
+  b.textContent = ghost.on ? 'Ghost: on' : bestGhost ? 'Ghost: ' + ghostKmh(bestGhost.d).toFixed(1) + ' km/h' : 'Ghost: none yet';
+  b.classList.toggle('on', ghost.on);
+  b.title = bestGhost
+    ? `Your fastest ride here (${Math.round((bestGhost.d.length - 1) / 60)} min on ${new Date(bestGhost.t).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}), ridden again beside you. Beat it and your ride becomes the ghost.`
+    : 'Ride here for five minutes or more, then stop, and your fastest ride comes back as a see-through rider to race.';
+};
+const setGhost = on => {
+  ghost.on = on && !!bestGhost;
+  if (ghost.on) { ghost.rec = bestGhost; ghost.t0 = st.time; ghost.d0 = st.dist; ghost.gap = 0; ghost.secs = 0; ghost.done = false; }
+  ghost.rig.visible = ghost.on;
+  ghostLabel();
+  return ghost.on ? 'Ghost on' : 'Ghost off';
+};
+$('ghost').addEventListener('click', () => setGhost(!ghost.on));
+ghostLabel();
+st.ghost = ghost; st.setGhost = setGhost; st.keepGhost = keepGhost; st.trace = trace;   // for testing
+st.ghostReset = () => { trace.length = 0; traceId = new Date().toISOString(); if (ghost.on) setGhost(true); };
+const ghostGapText = () => {                               // as the pacer's gap: minus when the ghost is ahead
+  if (ghost.done) return 'done';
+  const t = Math.round(Math.abs(ghost.secs)); if (!t) return '0 s';
+  return (ghost.secs > 0 ? '−' : '+') + (t < 100 ? t + ' s' : Math.floor(t / 60) + ':' + String(t % 60).padStart(2, '0'));
+};
+st.ghostResult = () => {
+  if (!ghost.on || st.time - ghost.t0 < 30) return '';
+  if (ghost.done) return 'You outlasted your ghost: its ride was shorter than yours';
+  const t = Math.round(Math.abs(ghost.secs)), by = t < 100 ? t + ' s' : Math.floor(t / 60) + ' min ' + (t % 60) + ' s';
+  return !t ? 'Level with your ghost' : ghost.secs > 0 ? `Your ghost is ${by} ahead of you` : `You are ${by} ahead of your ghost`;
+};
+function stepGhost(dt) {
+  if (!st.stopped) while (trace.length <= st.time && trace.length <= GHOST_MAX) trace.push(Math.round(st.dist * 10) / 10);
+  if (!ghost.on || ghost.done) return;
+  const d = ghost.rec.d, n = st.time - ghost.t0, i = Math.floor(n);
+  if (i >= d.length - 1) { ghost.done = true; ghost.rig.visible = false; return; }   // its ride has run out
+  const gd = d[i] + (d[i + 1] - d[i]) * (n - i) - d[0], gv = d[i + 1] - d[i];
+  ghost.gap = gd - (st.dist - ghost.d0);
+  ghost.secs = ghost.gap > 0 ? ghost.gap / Math.max(st.v, 1.5) : ghost.gap / Math.max(gv, 1.5);
+  if (!st.stopped && gv > 0.3) { ghost.crank += dt * Math.PI * 2 * 85 / 60; ghost.pedal(); }
+  const pp = at(st.s + ghost.gap, ghost.pose);
+  ghost.rig.position.copy(pp.p).addScaledVector(pp.r, LANE + (pacer.on ? 1.6 : 0.9));   // the pacer's line, or beside it when both ride
+  tagAt.copy(ghost.rig.position).add(pp.t); ghost.rig.lookAt(tagAt);
 }
 let lean = 0, phase = 0, grade = 0, huT = 0, first = true;
 // scenery mode's weather, in order, and how many seconds each one stays
@@ -2147,6 +2235,7 @@ function tick() {
   if (Math.abs(fov - camera.fov) > 0.01) { camera.fov = fov; camera.updateProjectionMatrix(); }
 
   stepPacer(dt);
+  stepGhost(dt);
   stepWeather(dt);
   rainU.uVel.value.copy(pose.t).multiplyScalar(st.v);
 
@@ -2183,6 +2272,7 @@ function tick() {
     $('h-di').textContent = (st.dist / 1000).toFixed(2);
     $('h-gear').hidden = $('gearrow').hidden = !bike.point; // gears only mean something while a trainer is taking the gradient
     $('h-pacer').hidden = !pacer.on; if (pacer.on) $('h-gap').textContent = gapText();
+    $('h-ghost').hidden = !ghost.on; if (ghost.on) $('h-ggap').textContent = ghostGapText();
     $('pwrrow').hidden = !!bike.dev;                        // and the power slider only while there is no trainer to read
     // say when the watts are not the rider's: no trainer at all, or one that has sent no power yet
     const mute = bike.dev && !bike.heard && performance.now() - bike.since > 5000;
