@@ -15,18 +15,75 @@
   #hud div { text-align: left; min-width: 70px; }
   #hud b { display: block; font-size: 30px; font-weight: 300; letter-spacing: -.01em; }
   #hud span { font-size: 10px; letter-spacing: .16em; text-transform: uppercase; opacity: .75; }
-  #ctl { position: fixed; top: 18px; right: 18px; left: 18px; display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: 10px 12px;
-    font-size: 11px; letter-spacing: .08em; text-shadow: 0 1px 8px rgba(0,0,0,.6); }
-  #ctl input { width: 150px; accent-color: #ffcf8f; }
-  #ctl button { font: inherit; color: #fff; background: rgba(20,16,12,.45); border: 1px solid rgba(255,255,255,.35);
-    border-radius: 999px; padding: 7px 13px; cursor: pointer; backdrop-filter: blur(6px); }
-  #ctl button:hover { background: rgba(20,16,12,.7); }
-  #ctl button.on { background: rgba(255,255,255,.3); border-color: #fff; }
-  #wx { display: flex; gap: 4px; }
-  #hills { display: flex; gap: 4px; align-items: center; }
-  #hills button { min-width: 30px; padding-left: 0; padding-right: 0; }
-  #hval { min-width: 74px; text-align: center; }
-  #log { position: fixed; top: 64px; right: 18px; width: 270px; max-height: 70vh; overflow: auto; padding: 14px 16px; border-radius: 14px;
+  #h-power.idle { pointer-events: auto; cursor: pointer; }        /* no trainer power: a click opens Connect bike */
+  #h-power.idle span { color: #ffc46b; opacity: 1; }
+  /* top left: where you are. top right: trainer, voice and the menu. everything else lives in the menu. */
+  #place { position: fixed; top: 18px; left: 18px; }
+  #places { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; margin-top: 8px; }
+  #places[hidden] { display: none; }
+  #ctl { position: fixed; top: 18px; right: 18px; display: flex; align-items: center; gap: 8px; }
+  #place, #ctl, #menu { font-size: 11px; letter-spacing: .08em; text-shadow: 0 1px 8px rgba(0,0,0,.6); }
+  #place button, #ctl button, #menu button { font: inherit; color: #fff; background: rgba(20,16,12,.45); border: 1px solid rgba(255,255,255,.35);
+    border-radius: 999px; padding: 7px 13px; cursor: pointer; backdrop-filter: blur(6px); white-space: nowrap; }
+  #place button:hover, #ctl button:hover, #menu button:hover { background: rgba(20,16,12,.7); }
+  #place button.on, #ctl button.on, #menu button.on { background: rgba(255,255,255,.3); border-color: #fff; }
+  /* Devices: how you are connected. One chip with a dot per device, opening a panel with a line and a button for each. */
+  .dd { display: inline-block; box-sizing: border-box; width: 7px; height: 7px; margin-right: 5px; border-radius: 50%; border: 1px solid rgba(255,255,255,.6); vertical-align: 1px; }
+  .dd.ok { background: #6fd6ae; border-color: #6fd6ae; } .dd.warn { background: #ffb347; border-color: #ffb347; }
+  #devlabel { margin-left: 3px; }
+  #devices { position: fixed; top: 62px; right: 18px; width: 300px; max-width: calc(100vw - 36px); box-sizing: border-box; padding: 4px 16px; border-radius: 14px;
+    background: rgba(20,16,12,.8); border: 1px solid rgba(255,255,255,.3); backdrop-filter: blur(8px); color: #fff; font-size: 13px; }
+  #devices[hidden] { display: none; }
+  #devices .dev { display: flex; align-items: center; gap: 12px; padding: 12px 0; }
+  #devices .dev + .dev { border-top: 1px solid rgba(255,255,255,.16); }
+  #devices .t { flex: 1; min-width: 0; } #devices .t b { display: block; font-weight: 600; } #devices .t span { font-size: 12px; opacity: .78; }
+  #devices button { font: inherit; font-size: 11px; letter-spacing: .06em; color: #fff; background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.4); border-radius: 999px; padding: 6px 12px; cursor: pointer; white-space: nowrap; }
+  #devices button:hover { background: rgba(255,255,255,.25); }
+  #toast { position: fixed; left: 50%; top: 22px; transform: translateX(-50%); padding: 8px 16px; border-radius: 999px; background: rgba(20,16,12,.8); border: 1px solid #ffcf8f;
+    color: #fff; font-size: 13px; letter-spacing: .04em; pointer-events: none; opacity: 0; transition: opacity .25s; white-space: nowrap; }
+  #menubtn { min-width: 38px; height: 30px; padding: 0; font-size: 13px; line-height: 13px; display: inline-flex; align-items: center; justify-content: center; }
+  #menu { position: fixed; top: 62px; right: 18px; width: 268px; max-height: calc(100vh - 90px); overflow: auto; box-sizing: border-box; padding: 14px;
+    border-radius: 14px; background: rgba(20,16,12,.74); border: 1px solid rgba(255,255,255,.3); backdrop-filter: blur(8px);
+    display: flex; flex-direction: column; gap: 10px; }
+  #menu[hidden], #menu [hidden] { display: none !important; }
+  #menu .lab { font-size: 10px; letter-spacing: .14em; text-transform: uppercase; opacity: .7; margin-bottom: -4px; }
+  #menu .step { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  #menu .step button { min-width: 34px; padding-left: 0; padding-right: 0; }
+  #menu .step input { flex: 1; min-width: 0; accent-color: #ffcf8f; }
+  #menu .acts { display: flex; flex-wrap: wrap; gap: 6px; }
+  #menu #helpbtn { min-width: 32px; padding-left: 0; padding-right: 0; font-size: 13px; font-weight: 600; }
+  #help { position: fixed; top: 62px; right: 18px; width: 300px; max-height: calc(100vh - 90px); overflow: auto; box-sizing: border-box; padding: 16px 18px;
+    border-radius: 14px; background: rgba(20,16,12,.8); border: 1px solid rgba(255,255,255,.3); backdrop-filter: blur(8px); font-size: 13px; line-height: 1.5; color: #fff; }
+  #help[hidden] { display: none; }
+  #help h3 { margin: 14px 0 4px; font-size: 10px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; opacity: .7; }
+  #help h3:first-child { margin-top: 0; }
+  #help p { margin: 0 0 4px; }
+  #help dl { display: grid; grid-template-columns: auto 1fr; gap: 3px 12px; margin: 0; }
+  #help dt { opacity: .7; white-space: nowrap; } #help dd { margin: 0; }
+  #help kbd { font: inherit; padding: 0 5px; border: 1px solid rgba(255,255,255,.35); border-radius: 5px; }
+  #help button { margin-top: 14px; font: inherit; font-size: 11px; color: #fff; background: none; border: 1px solid rgba(255,255,255,.35); border-radius: 999px; padding: 5px 12px; cursor: pointer; }
+  #menu .foot { display: flex; justify-content: space-between; align-items: center; padding-top: 10px; border-top: 1px solid rgba(255,255,255,.16); }
+  #menu #stop { background: #ffcf8f; border-color: #ffcf8f; color: #2a1b0a; font-weight: 600; text-shadow: none; padding: 8px 16px; }
+  #menu #stop:hover { background: #ffdcae; }
+  #wx, #season, #pwait { display: flex; flex-wrap: wrap; gap: 4px; }
+  #menu #pacer { flex: 1; }
+  #h-pacer b { color: #ffcf8f; }
+  #menu #ghost { flex: 1; } #menu #ghost:disabled { opacity: .55; cursor: default; }
+  #h-ghost b { color: #cfe4ff; }
+  #done #d-ghost { margin: -6px 0 18px; padding-top: 14px; border-top: 1px solid rgba(255,255,255,.18); color: #cfe4ff; font-size: 14px; }
+  #done #d-pacer { margin: -6px 0 18px; padding-top: 14px; border-top: 1px solid rgba(255,255,255,.18); color: #ffcf8f; font-size: 14px; }
+  #done { position: fixed; left: 50%; top: 46%; transform: translate(-50%, -50%); width: min(360px, calc(100vw - 36px)); box-sizing: border-box; padding: 22px 24px;
+    border-radius: 18px; background: rgba(20,16,12,.8); border: 1px solid rgba(255,255,255,.3); backdrop-filter: blur(10px); color: #fff; text-align: center; }
+  #done[hidden] { display: none; }
+  #done h3 { margin: 0 0 16px; font-size: 11px; font-weight: 600; letter-spacing: .16em; text-transform: uppercase; opacity: .75; }
+  #done .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 16px 10px; margin-bottom: 20px; font-variant-numeric: tabular-nums; }
+  #done .stats b { display: block; font-size: 28px; font-weight: 300; }
+  #done .stats span { font-size: 10px; letter-spacing: .14em; text-transform: uppercase; opacity: .7; }
+  #done .acts { display: flex; justify-content: center; gap: 8px; }
+  #done button { font: inherit; font-size: 12px; letter-spacing: .06em; color: #fff; background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.4); border-radius: 999px; padding: 9px 16px; cursor: pointer; }
+  #done button:hover { background: rgba(255,255,255,.25); }
+  #done #resume { background: rgba(255,255,255,.3); border-color: #fff; }
+  #log { position: fixed; top: 62px; right: 18px; width: 270px; max-height: 70vh; overflow: auto; padding: 14px 16px; border-radius: 14px;
     background: rgba(20,16,12,.72); border: 1px solid rgba(255,255,255,.3); backdrop-filter: blur(8px); font-size: 13px; color: #fff; }
   #log h3 { margin: 0 0 8px; font-size: 11px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; opacity: .75; }
   #log .tot { display: flex; gap: 18px; margin-bottom: 12px; }
@@ -282,8 +339,22 @@ if (COURSE !== 'valley') {
   real.h = Float32Array.from(q, v => real.demMin + v / 65535 * (real.demMax - real.demMin));     // surveyed ground heights, metres
   $('credit').textContent = real.credit + ' ' + real.osm.credit;
 }
-$('course').textContent = real ? 'Course: Leckhampton' : 'Course: Valley';
-$('course').addEventListener('click', () => { location.search = real ? '' : '?course=leckhampton'; });
+// Place is where you ride, season is what the land looks like, weather is the sky on top. Place and season are built
+// when the page loads, so choosing either reloads; weather changes at once. Only the Alps has a Christmas so far.
+{
+  const PLACE = real ? 'leckhampton' : 'alps', SEASON = XMAS ? 'christmas' : 'summer', list = $('places');
+  const go = (place, season) => { location.search = place === 'leckhampton' ? '?course=leckhampton' : season === 'christmas' ? '?theme=christmas' : ''; };
+  for (const b of list.children) {
+    if (b.dataset.p === PLACE) { b.classList.add('on'); $('course').textContent = b.textContent + ' ▾'; }
+    b.addEventListener('click', () => { if (b.dataset.p === PLACE) list.hidden = true; else go(b.dataset.p, SEASON); });
+  }
+  $('course').addEventListener('click', () => { list.hidden = !list.hidden; $('course').setAttribute('aria-expanded', !list.hidden); });
+  for (const b of [...$('season').children]) {
+    if (b.dataset.s === 'christmas' && PLACE !== 'alps') { b.remove(); continue; }
+    b.classList.toggle('on', b.dataset.s === SEASON);
+    b.addEventListener('click', () => { if (b.dataset.s !== SEASON) go(PLACE, b.dataset.s); });
+  }
+}
 function demH(x, z) {                 // the real ground under a point
   const g = real.cells, w = g + 1, f = v => Math.min(g - 1e-6, Math.max(0, (v + real.size / 2) / (real.size / g)));
   const fx = f(x), fz = f(z), ix = Math.floor(fx), iz = Math.floor(fz), u = fx - ix, v = fz - iz, h = real.h;
@@ -1210,8 +1281,6 @@ const WEATHER = {
               cloud: 1, cLit: grey(0.56, 0.6, 0.66), cDark: grey(0.3, 0.33, 0.39), mote: 0, rays: 0, rain: 1, rough: 0.32, tint: 0.55, ground: 0.72, paint: 0, expo: 0.5 },
   mist:     { sun: 5,   sunCol: [1, 0.8, 0.6], hemi: 2.6, fog: 0.0075, fogCol: hz.map(v => v * 0.95), dome: 0.6, domeH: hz, domeZ: hz.map(v => v * 0.8),
               cloud: 0.3, cLit: warmLit, cDark: warmDark, mote: 1, rays: 1.8, rain: 0, rough: 0.7, tint: 0.85, ground: 0.95, paint: 0, expo: 0.33 },
-  starry:   { sun: 5, sunCol: [1, 0.93, 0.74], hemi: 3.2, fog: 0.0005, fogCol: grey(0.16, 0.26, 0.52), dome: 1, domeH: grey(0.16, 0.26, 0.52), domeZ: grey(0.05, 0.1, 0.4),
-              cloud: 0, cLit: warmLit, cDark: warmDark, mote: 5, rays: 0, rain: 0, rough: 0.95, tint: 1, ground: 1, paint: 1, expo: 0.5 }
 };
 // Christmas dusk: the last low sun, a blue sky closing in, light snow falling.
 WEATHER.snow = { sun: 5, sunCol: [1, 0.64, 0.46], hemi: 2.5, fog: 0.0015, fogCol: [hz[0] * 0.8, hz[1] * 0.86, hz[2] * 1.05], dome: 0.4, domeH: hz, domeZ: grey(0.26, 0.33, 0.62),
@@ -1220,7 +1289,7 @@ for (const k in WEATHER) WEATHER[k].snow ??= 0;
 const wx = JSON.parse(JSON.stringify(WEATHER.golden));
 let wxTarget = WEATHER.golden;
 function setWeather(name, instant) {
-  if (!WEATHER[name]) return;
+  if (!WEATHER[name] || !document.querySelector(`#wx [data-w="${name}"]`)) return;   // only the weathers this season offers
   wxTarget = WEATHER[name];
   if (instant) Object.assign(wx, JSON.parse(JSON.stringify(wxTarget)));
   // re-bake what the road and bike reflect, using the new sky
@@ -1254,11 +1323,10 @@ function stepWeather(dt) {
   renderer.toneMappingExposure = wx.expo;
 }
 document.querySelectorAll('#wx button').forEach(b => b.addEventListener('click', () => setWeather(b.dataset.w)));
-// Starry is still being worked on: it only appears on the local copy, not the hosted site.
-const LAB = /^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname) || location.protocol === 'file:';
-if (!LAB) document.querySelector('#wx [data-w="starry"]')?.remove();
-if (!XMAS) document.querySelector('#wx [data-w="snow"]')?.remove(); else setWeather('snow', true);
-addEventListener('keydown', e => { const n = ['golden', 'overcast', 'rain', 'mist', LAB && 'starry'][+e.key - 1]; if (n) setWeather(n); });
+// each season has its own weathers: snow only falls at Christmas, and rain on deep snow looks wrong, so Christmas has none
+document.querySelector(`#wx [data-w="${XMAS ? 'rain' : 'snow'}"]`)?.remove();
+if (XMAS) setWeather('snow', true);
+addEventListener('keydown', e => { const b = document.querySelectorAll('#wx button')[+e.key - 1]; if (b) setWeather(b.dataset.w); });   // number keys follow the buttons, left to right
 
 /* ---------- cockpit ---------- */
 const rig = new THREE.Group();
@@ -1394,6 +1462,8 @@ addEventListener('keydown', e => {
   if (e.key === 'ArrowDown') setTarget(st.target - 10);
   if (e.key === 'ArrowRight') skip(250);
   if (e.key === 'ArrowLeft') skip(-250);
+  if (e.key === '.' || e.key === '>') setGear(GEAR + 1);
+  if (e.key === ',' || e.key === '<') setGear(GEAR - 1);
 });
 $('pwr').addEventListener('input', e => { st.target = +e.target.value; });
 
@@ -1404,7 +1474,100 @@ $('clean').addEventListener('click', e => { e.stopPropagation(); setClean(true);
 addEventListener('click', () => { if (isClean()) setClean(false); });
 addEventListener('keydown', e => { if ((e.key === 'h' || e.key === 'H') && !e.metaKey && !e.ctrlKey && !e.altKey) setClean(!isClean()); });
 $('skip').addEventListener('click', () => skip(250));
-/* Smart trainer. Power is read from the Cycling Power service. If the trainer also has the Fitness Machine
+// Stop ride: roll to a halt and show what you did. Keep riding carries on; New ride starts the numbers (and a new log entry) again.
+const clockTime = t => { t = Math.round(t); const h = Math.floor(t / 3600), m = Math.floor(t % 3600 / 60), s = String(t % 60).padStart(2, '0'); return h ? h + ':' + String(m).padStart(2, '0') + ':' + s : m + ':' + s; };
+const stopRide = () => {
+  if (st.stopped) return;
+  st.stopped = true; setMenu(false); if (isClean()) setClean(false);
+  $('d-km').textContent = (st.dist / 1000).toFixed(st.dist < 99950 ? 2 : 1); $('d-time').textContent = clockTime(st.time);
+  $('d-pw').textContent = st.time > 1 ? Math.round(st.work / st.time) : 0; $('d-up').textContent = Math.round(st.climb);
+  $('tcx').hidden = st.track.length < 2;
+  const verdict = st.pacerResult ? st.pacerResult() : ''; $('d-pacer').hidden = !verdict; $('d-pacer').textContent = verdict;
+  // the ghost's verdict first (against the ghost you rode with), then whether this ride is the new ghost
+  const spooked = st.ghostResult ? st.ghostResult() : '', best = st.keepGhost ? st.keepGhost() : false;
+  const gtext = [spooked, best ? 'Your fastest ride here: it is your ghost now' : ''].filter(Boolean).join('. ');
+  $('d-ghost').hidden = !gtext; $('d-ghost').textContent = gtext;
+  $('done').hidden = false; $('resume').focus();
+  if (st.saveRide) st.saveRide();
+};
+// The ride as a file Strava and others can read (TCX): a point a second with time, distance, height, speed and power.
+// A real course also gets its true position, so the ride draws on the map; the invented valley has none to give.
+// British National Grid easting/northing -> WGS84 latitude/longitude (Ordnance Survey's formulas; good to a few metres)
+const bngToLatLon = (E, N) => {
+  let a = 6377563.396, b = 6356256.909, e2 = 1 - b * b / (a * a);
+  const F0 = 0.9996012717, p0 = 49 * Math.PI / 180, l0 = -2 * Math.PI / 180, N0 = -100000, E0 = 400000, n = (a - b) / (a + b);
+  let p = p0, M = 0;
+  do {
+    p += (N - N0 - M) / (a * F0);
+    M = b * F0 * ((1 + n + 1.25 * n * n + 1.25 * n ** 3) * (p - p0) - (3 * n + 3 * n * n + 2.625 * n ** 3) * Math.sin(p - p0) * Math.cos(p + p0)
+      + (1.875 * n * n + 1.875 * n ** 3) * Math.sin(2 * (p - p0)) * Math.cos(2 * (p + p0)) - 35 / 24 * n ** 3 * Math.sin(3 * (p - p0)) * Math.cos(3 * (p + p0)));
+  } while (Math.abs(N - N0 - M) >= 1e-5);
+  const sp = Math.sin(p), nu = a * F0 / Math.sqrt(1 - e2 * sp * sp), rho = a * F0 * (1 - e2) / (1 - e2 * sp * sp) ** 1.5, eta2 = nu / rho - 1;
+  const t = Math.tan(p), t2 = t * t, sec = 1 / Math.cos(p), dE = E - E0;
+  const lat = p - t / (2 * rho * nu) * dE ** 2 + t / (24 * rho * nu ** 3) * (5 + 3 * t2 + eta2 - 9 * t2 * eta2) * dE ** 4 - t / (720 * rho * nu ** 5) * (61 + 90 * t2 + 45 * t2 * t2) * dE ** 6;
+  const lon = l0 + sec / nu * dE - sec / (6 * nu ** 3) * (nu / rho + 2 * t2) * dE ** 3 + sec / (120 * nu ** 5) * (5 + 28 * t2 + 24 * t2 * t2) * dE ** 5 - sec / (5040 * nu ** 7) * (61 + 662 * t2 + 1320 * t2 * t2 + 720 * t2 ** 3) * dE ** 7;
+  // to x, y, z on the Airy ellipsoid, shift and turn to WGS84 (Helmert), and back to latitude and longitude
+  const v = a / Math.sqrt(1 - e2 * Math.sin(lat) ** 2), x = v * Math.cos(lat) * Math.cos(lon), y = v * Math.cos(lat) * Math.sin(lon), z = (1 - e2) * v * Math.sin(lat);
+  const s = -20.4894e-6, as = Math.PI / 648000, rx = 0.1502 * as, ry = 0.247 * as, rz = 0.8421 * as;
+  const x2 = 446.448 + (1 + s) * x - rz * y + ry * z, y2 = -125.157 + rz * x + (1 + s) * y - rx * z, z2 = 542.06 - ry * x + rx * y + (1 + s) * z;
+  a = 6378137; b = 6356752.3142; e2 = 1 - b * b / (a * a);
+  const pr = Math.hypot(x2, y2); let phi = Math.atan2(z2, pr * (1 - e2));
+  for (let i = 0; i < 10; i++) { const w = a / Math.sqrt(1 - e2 * Math.sin(phi) ** 2); phi = Math.atan2(z2 + e2 * w * Math.sin(phi), pr); }
+  return [phi * 180 / Math.PI, Math.atan2(y2, x2) * 180 / Math.PI];
+};
+const rideFile = () => {
+  const iso = t => new Date(t).toISOString().replace(/\.\d+Z$/, 'Z'), pts = st.track, t0 = pts[0][0];
+  const body = pts.map(([t, x, y, z, d, v, w]) => {
+    let pos = '';
+    if (real && real.origin) { const [la, lo] = bngToLatLon(real.origin[0] + x, real.origin[1] - z); pos = `<Position><LatitudeDegrees>${la.toFixed(6)}</LatitudeDegrees><LongitudeDegrees>${lo.toFixed(6)}</LongitudeDegrees></Position>`; }
+    return `<Trackpoint><Time>${iso(t)}</Time>${pos}<AltitudeMeters>${y.toFixed(1)}</AltitudeMeters><DistanceMeters>${d.toFixed(1)}</DistanceMeters>`
+      + `<Extensions><ns3:TPX><ns3:Speed>${v.toFixed(2)}</ns3:Speed><ns3:Watts>${Math.round(w)}</ns3:Watts></ns3:TPX></Extensions></Trackpoint>`;
+  }).join('\n');
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<TrainingCenterDatabase xmlns="http://www.garmin.com/xmlschemas/TrainingCenterDatabase/v2" xmlns:ns3="http://www.garmin.com/xmlschemas/ActivityExtension/v2">
+<Activities><Activity Sport="Biking"><Id>${iso(t0)}</Id>
+<Lap StartTime="${iso(t0)}"><TotalTimeSeconds>${Math.round(st.time)}</TotalTimeSeconds><DistanceMeters>${st.dist.toFixed(1)}</DistanceMeters><Intensity>Active</Intensity><TriggerMethod>Manual</TriggerMethod>
+<Track>
+${body}
+</Track></Lap><Notes>Golden Hour Ride, ${real ? 'Leckhampton Hill' : 'the valley'}</Notes></Activity></Activities>
+</TrainingCenterDatabase>`;
+};
+st.rideFile = rideFile;                                    // for testing
+$('tcx').addEventListener('click', () => {
+  if (st.track.length < 2) return;
+  const d = new Date(st.track[0][0]), two = n => String(n).padStart(2, '0');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([rideFile()], { type: 'application/vnd.garmin.tcx+xml' }));
+  a.download = `golden-hour-ride-${d.getFullYear()}-${two(d.getMonth() + 1)}-${two(d.getDate())}-${two(d.getHours())}${two(d.getMinutes())}.tcx`;
+  a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+});
+const resumeRide = () => { st.stopped = false; $('done').hidden = true; if (st.v < 3) st.v = 3; };
+$('stop').addEventListener('click', stopRide);
+$('resume').addEventListener('click', resumeRide);
+$('again').addEventListener('click', () => { if (st.newRide) st.newRide(); st.dist = st.time = st.work = st.climb = 0; st.track = []; st.sampled = -1; if (st.pacerReset) st.pacerReset(); if (st.ghostReset) st.ghostReset(); resumeRide(); });
+// the menu: one button, the M key, and a click on the scenery closes it. The ride log shares its corner, so only one is open.
+let toastT = 0;
+const toast = t => { $('toast').textContent = t; $('toast').style.opacity = 1; clearTimeout(toastT); toastT = setTimeout(() => { $('toast').style.opacity = 0; }, 1600); };
+st.toast = toast;
+const setDevices = open => {
+  $('devices').hidden = !open; $('devbtn').classList.toggle('on', open); $('devbtn').setAttribute('aria-expanded', open);
+  if (open) { setMenu(false); $('help').hidden = true; if (!$('log').hidden) $('logbtn').click(); }
+};
+$('devbtn').addEventListener('click', () => setDevices($('devices').hidden));
+st.setDevices = setDevices;
+const COG = $('menubtn').innerHTML;                       // the settings cog, kept to put back when the menu closes
+const setMenu = open => {
+  $('menu').hidden = !open; $('menubtn').classList.toggle('on', open); $('menubtn').innerHTML = open ? '✕' : COG; $('menubtn').setAttribute('aria-expanded', open);
+  if (open && !$('log').hidden) $('logbtn').click();
+  if (open) { $('help').hidden = true; setDevices(false); }
+};
+$('helpbtn').addEventListener('click', () => { setMenu(false); $('help').hidden = false; });
+$('helpclose').addEventListener('click', () => { $('help').hidden = true; });
+$('menubtn').addEventListener('click', () => setMenu($('menu').hidden));
+$('c').addEventListener('click', () => { setMenu(false); setDevices(false); $('help').hidden = true; $('places').hidden = true; if (!$('log').hidden) $('logbtn').click(); });
+addEventListener('keydown', e => { if ((e.key === 'm' || e.key === 'M') && !e.metaKey && !e.ctrlKey && !e.altKey) setMenu($('menu').hidden); });
+$('logbtn').addEventListener('click', () => setTimeout(() => { if (!$('log').hidden) { setMenu(false); setDevices(false); $('help').hidden = true; } }, 0));   // after the log has opened
+/* Smart trainer. Power is read from the Cycling Power service, or from FTMS when that is all it has. If the trainer has the Fitness Machine
    Service (FTMS), the game takes control of it and sends the road gradient, so climbs feel harder on the bike.
    Bkool trainers without FTMS (the Smart Pro 3, sold by Zycle as the Smart ZPro) take ANT+ FE-C data pages, bare,
    on a Bkool characteristic instead: the format comes from a recording of Kinomap driving one.
@@ -1429,15 +1592,33 @@ const setHills = (pct, keep = true) => {          // keep: remember it in this b
   HILLS = Math.max(0, Math.min(100, Math.round(pct / 10) * 10)) / 100;
   if (keep) try { localStorage.setItem(HILLS_KEY, String(Math.round(HILLS * 100))); } catch {}
   $('hval').textContent = HILLS ? 'Hills ' + Math.round(HILLS * 100) + ' %' : 'Hills off';
-  bike.at = 0;                                      // tell the trainer straight away
+  bike.at = 0; if (bike.point) sendGrade();        // tell the trainer now, not on the next quarter-second tick
+};
+// Virtual gears, for a smart trainer that takes the gradient. There is no real chain to move, so a gear change
+// nudges the gradient the trainer is told: each gear above the middle one feels like 0.7 % more slope, each one
+// below like 0.7 % less. It works on the flat too, and never changes your speed in the game, only how the pedals feel.
+const GEARS = 12, GEAR_MID = 6, GEAR_STEP = 0.7;
+let GEAR = GEAR_MID;
+st.bike = bike; st.sendGrade = () => sendGrade();   // for testing without a trainer
+st.useTrainer = dev => useTrainer(dev);
+const setGear = n => {
+  GEAR = Math.max(1, Math.min(GEARS, Math.round(n)));
+  $('h-ge').textContent = GEAR; $('gval').textContent = 'Gear ' + GEAR;
+  bike.at = 0; if (bike.point) sendGrade();        // tell the trainer now, not on the next quarter-second tick
+  return 'Gear ' + GEAR;
 };
 const TRAINER_KEY = 'golden-hour-ride-trainer';     // the last trainer used: { id, name }, kept in this browser
 const lastTrainer = () => { try { return JSON.parse(localStorage.getItem(TRAINER_KEY)) || null; } catch { return null; } };
 const btLabel = () => {
   const last = lastTrainer();
-  $('bt').textContent = bike.dev ? (bike.point ? 'Trainer: power and gradient' : 'Trainer: power only')
-    : bike.known || (last && navigator.bluetooth && navigator.bluetooth.getDevices) ? 'Reconnect trainer' : 'Connect trainer';
+  const known = bike.known || (last && navigator.bluetooth && navigator.bluetooth.getDevices);
+  $('dd-trainer').className = 'dd' + (bike.dev ? (bike.point ? ' ok' : ' warn') : '');
+  $('ds-trainer').textContent = bike.dev ? (bike.point ? 'Power and gradient' : 'Power only: no gears or hills') : 'Not connected';
+  $('bt').textContent = bike.dev ? (bike.point ? 'Change' : 'Retry') : known ? 'Reconnect' : 'Connect';
+  $('devlabel').textContent = bike.dev ? (bike.point ? 'Bike connected' : 'Bike: power only') : 'Connect bike';   // the chip asks first, then reports
 };
+$('gless').addEventListener('click', () => setGear(GEAR - 1));
+$('gmore').addEventListener('click', () => setGear(GEAR + 1));
 $('hless').addEventListener('click', () => setHills(HILLS * 100 - 10));
 $('hmore').addEventListener('click', () => setHills(HILLS * 100 + 10));
 
@@ -1601,7 +1782,7 @@ async function useTrainer(dev) {
       if (wasInUse) rejoin(dev);
     });
   }
-  bike.dev = bike.known = dev; bike.tries = 0; $('bt').title = dev.name || '';
+  bike.dev = bike.known = dev; bike.tries = 0; bike.since = performance.now(); bike.heard = 0; $('bt').title = dev.name || '';
   try { localStorage.setItem(TRAINER_KEY, JSON.stringify({ id: dev.id, name: dev.name || '' })); } catch {}
   await ftmsStart(server);
   if (dev.gatt.connected) btLabel();
@@ -1610,7 +1791,7 @@ async function useTrainer(dev) {
 // the trainer dropped out (out of range, asleep, a blip): try it again a few times before giving up
 async function rejoin(dev) {
   while (!bike.dev && bike.known === dev && bike.tries < 6) {
-    bike.tries++; $('bt').textContent = 'Reconnecting…';
+    bike.tries++; $('ds-trainer').textContent = 'Reconnecting…';
     await new Promise(r => setTimeout(r, 2500));
     if (bike.dev || bike.known !== dev) return;
     try { await useTrainer(dev); return; } catch (err) { clearInterval(bike.timer); bike.dev = bike.point = null; }
@@ -1627,14 +1808,23 @@ async function knownTrainers() {
   return list;
 }
 
+// a plain reason for a trainer that would not connect
+const whyNot = err => {
+  const m = String(err && err.message || err);
+  if (err && err.name === 'NotFoundError') return 'Not connected';                        // the list was closed without picking one
+  if (m === 'no power') return "This trainer doesn't share its power with the browser";
+  if (m === 'timed out') return "No answer. Is it awake, and not in use by Zwift or another app?";
+  return "Couldn't connect. Close Zwift or any other app using it, then try again";
+};
+$('h-power').addEventListener('click', () => { if ($('h-power').classList.contains('idle')) setDevices(true); });
 $('bt').addEventListener('click', async () => {
-  if (!navigator.bluetooth) { $('bt').textContent = 'Needs Chrome or Edge'; return; }
+  if (!navigator.bluetooth) { $('ds-trainer').textContent = 'Needs Chrome or Edge'; return; }
   if (bike.busyJoin) return;
   bike.busyJoin = true; bike.tries = 99;                    // a click takes over from any automatic retry
   try {
     if (!bike.dev) {
       for (const dev of await knownTrainers()) {
-        $('bt').textContent = 'Reconnecting…';
+        $('ds-trainer').textContent = 'Reconnecting…';
         try { await useTrainer(dev); return; } catch (err) { clearInterval(bike.timer); bike.dev = bike.point = null; }
       }
     }
@@ -1644,7 +1834,11 @@ $('bt').addEventListener('click', async () => {
     $('bt').textContent = 'Connecting…';
     if (bike.dev && bike.dev !== dev) { const old = bike.dev; bike.known = dev; try { old.gatt.disconnect(); } catch {} }
     await useTrainer(dev);
-  } catch (err) { if (!bike.dev) { clearInterval(bike.timer); bike.point = null; } btLabel(); }
+  } catch (err) {
+    if (!bike.dev) { clearInterval(bike.timer); bike.point = null; }
+    btLabel();
+    if (!bike.dev) $('ds-trainer').textContent = whyNot(err);   // say what went wrong, not just "Not connected"
+  }
   finally { bike.busyJoin = false; }
 });
 btLabel();
@@ -1712,6 +1906,151 @@ $('hrbtn').addEventListener('click', async () => {
   finally { hrm.busy = false; }
 });
 
+/* ---------- handlebar controller (Bluetooth) ----------
+   Two kinds connect here. Zwift Ride handlebars talk to the ride directly: after a "RideOn" greeting they send
+   [0x23, protobuf], where field 1 is a bit per button (a 0 bit means pressed) and field 3 lists the two paddles.
+   Anything speaking the open OpenBikeControl protocol (the BikeControl app, some bikes) sends
+   [0x01, button, state, button, state, ...]. Either way we act when a button goes down. */
+{
+  const SVC = 'd273f680-d548-419d-b9d1-fa0472345229', BUTTONS = 'd273f681-d548-419d-b9d1-fa0472345229',
+    HAPTIC = 'd273f682-d548-419d-b9d1-fa0472345229', APPINFO = 'd273f683-d548-419d-b9d1-fa0472345229';
+  const ZRIDE = 0xfc82, ZOLD = '00000001-19ca-4651-86e5-fa29dcdd09d1', Z_ASYNC = '00000002-19ca-4651-86e5-fa29dcdd09d1', Z_RX = '00000003-19ca-4651-86e5-fa29dcdd09d1',
+    Z_TX = '00000004-19ca-4651-86e5-fa29dcdd09d1';
+  const btn = $('obc'), pad = { dev: null, haptic: null, down: new Set(), rx: null, held: 0 };
+  const label = t => { btn.textContent = t; btn.classList.toggle('on', !!pad.dev); };
+  btn.hidden = !new URLSearchParams(location.search).has('controller');   // off the top bar unless the address ends ?controller
+  const weather = step => {
+    const all = [...document.querySelectorAll('#wx button')], i = all.findIndex(b => b.classList.contains('on'));
+    const next = all[(Math.max(0, i) + step + all.length) % all.length]; setWeather(next.dataset.w); return next.textContent;
+  };
+  const shift = up => {                                   // on a smart trainer a shift changes gear; without one, the power
+    if (bike.dev) return setGear(GEAR + (up ? 1 : -1));
+    setTarget(st.target + (up ? 10 : -10)); return st.target + ' W';
+  };
+  const power = d => { setTarget(st.target + d); return st.target + ' W'; };
+  const ACT = {
+    0x01: () => shift(true), 0x02: () => shift(false),                                  // shift up, shift down
+    0x10: () => power(10), 0x11: () => power(-10),                                      // up, down
+    0x12: () => (skip(-250), 'Skip back'), 0x13: () => (skip(250), 'Skip ahead'),       // left, right
+    0x18: () => (skip(-250), 'Skip back'), 0x19: () => (skip(250), 'Skip ahead'),       // steer left, steer right
+    0x14: () => weather(1), 0x15: () => weather(-1),                                    // select, back
+    0x16: () => (setClean(!isClean()), isClean() ? 'Info hidden' : 'Info shown') };     // menu
+  const onButtons = d => {
+    if (d.byteLength < 3 || d.getUint8(0) !== 0x01) return;
+    for (let i = 1; i + 1 < d.byteLength; i += 2) {
+      const id = d.getUint8(i), state = d.getUint8(i + 1);
+      if (state !== 0x01) { if (state === 0x00) pad.down.delete(id); continue; }      // released, or an analogue value we do not use
+      if (pad.down.has(id)) continue; pad.down.add(id);
+      if (!ACT[id]) continue;
+      label('Controller: ' + ACT[id]());
+      if (pad.haptic) pad.haptic.writeValueWithoutResponse(new Uint8Array([0x03, 0x01, 0x00, 0x00])).catch(() => {});   // one short buzz
+    }
+  };
+  st.pad = bytes => onButtons(new DataView(new Uint8Array(bytes).buffer));               // for testing without a controller
+
+  // Zwift Ride handlebars. Right-hand shifters and paddle change up, left-hand ones change down, as in Zwift.
+  const ZBTN = [
+    [0x0001, () => (skip(-250), 'Skip back')], [0x0004, () => (skip(250), 'Skip ahead')],   // pad left, right
+    [0x0002, () => power(10)], [0x0008, () => power(-10)],                                  // pad up, down
+    [0x0010, () => weather(1)], [0x0020, () => weather(-1)],                                // A, B
+    [0x0040, () => (setClean(!isClean()), isClean() ? 'Info hidden' : 'Info shown')],       // Y
+    [0x0100, () => shift(false)], [0x0200, () => shift(false)],                             // left shifters
+    [0x1000, () => shift(true)], [0x2000, () => shift(true)]];                              // right shifters
+  const PADDLE_L = 0x10000, PADDLE_R = 0x20000;                                             // our own bits for the two paddles
+  const buzz = () => { if (pad.rx) pad.rx.writeValueWithoutResponse(new Uint8Array([0x12, 0x12, 0x08, 0x0A, 0x06, 0x08, 0x02, 0x10, 0x00, 0x18, 0x20])).catch(() => {}); };
+  const onRide = d => {
+    if (d.byteLength < 2 || d.getUint8(0) !== 0x23) return;                                 // 0x23: the buttons changed
+    let i = 1, map = 0xFFFFFFFF, held = 0;
+    const varint = () => { let v = 0, sh = 0, b; do { b = d.getUint8(i++); if (sh < 35) v += (b & 0x7F) * 2 ** sh; sh += 7; } while (b & 0x80); return v; };
+    try {
+      while (i < d.byteLength) {
+        const tag = varint(), field = tag >>> 3, wire = tag & 7;
+        if (wire === 0) { const v = varint(); if (field === 1) map = v >>> 0; }
+        else if (wire === 2) {
+          const len = varint(), end = i + len;
+          if (field === 3) {                                                                // one paddle: which side, and how far it is pulled
+            let side = 0, pull = 0;
+            while (i < end) { const t = varint(), v = varint(); if (t >>> 3 === 1) side = v; if (t >>> 3 === 2) pull = (v >>> 1) ^ -(v & 1); }
+            if (Math.abs(pull) >= 25) held |= side === 0 ? PADDLE_L : side === 1 ? PADDLE_R : 0;
+          }
+          i = end;
+        } else return;
+      }
+    } catch { return; }
+    held |= ~map & 0xFFFF;
+    const fresh = held & ~pad.held; pad.held = held;
+    let said = null;
+    for (const [bit, act] of ZBTN) if (fresh & bit) said = act();
+    if (fresh & PADDLE_L) said = shift(false);
+    if (fresh & PADDLE_R) said = shift(true);
+    if (said !== null) { label('Controller: ' + said); if (fresh & (0x3300 | PADDLE_L | PADDLE_R)) buzz(); }
+  };
+  st.zpad = bytes => onRide(new DataView(new Uint8Array(bytes).buffer));                    // for testing without the handlebars
+  // run one step of connecting with its name on the button, and give up if the device does not answer in time
+  const step = (text, promise, ms = 12000) => {
+    label(text);
+    return Promise.race([promise, new Promise((_, no) => setTimeout(() => no(Object.assign(new Error('no answer'), { stuck: text })), ms))]);
+  };
+  const joinRide = async gatt => {
+    let svc = null;
+    for (const id of [ZRIDE, ZOLD]) { try { svc = await step('Looking for buttons…', gatt.getPrimaryService(id)); break; } catch (err) { if (err.stuck) throw err; } }
+    if (!svc) {                                          // newer handlebars hide this until Zwift itself has unlocked them
+      let fw = '', seen = '';
+      try { fw = new TextDecoder().decode(await step('Checking…', (async () => (await (await gatt.getPrimaryService('device_information')).getCharacteristic('firmware_revision_string')).readValue())(), 5000)); } catch {}
+      try { seen = (await step('Checking…', gatt.getPrimaryServices(), 5000)).map(x => x.uuid).join(', '); } catch {}
+      throw Object.assign(new Error('locked'), { locked: true, fw, seen });
+    }
+    const inbox = await step('Starting…', svc.getCharacteristic(Z_ASYNC)), tx = await step('Starting…', svc.getCharacteristic(Z_TX));
+    pad.rx = await step('Starting…', svc.getCharacteristic(Z_RX));
+    inbox.addEventListener('characteristicvaluechanged', e => {
+      const d = e.target.value;                           // keep the last few raw messages in the button's tooltip, to help if a button does nothing
+      pad.seen = [...(pad.seen || []), [...new Uint8Array(d.buffer, d.byteOffset, d.byteLength)].map(b => b.toString(16).padStart(2, '0')).join(' ')].slice(-4);
+      btn.title = 'Last messages from the handlebars:\n' + pad.seen.join('\n');
+      onRide(d);
+    });
+    await step('Starting…', inbox.startNotifications());
+    try { await step('Starting…', tx.startNotifications(), 4000); } catch {}
+    await step('Saying hello…', pad.rx.writeValueWithoutResponse(new TextEncoder().encode('RideOn')));   // the greeting that starts the button messages
+  };
+  btn.addEventListener('click', async e => {
+    if (!navigator.bluetooth) { label('Needs Chrome or Edge'); return; }
+    if (pad.dev) { try { pad.dev.gatt.disconnect(); } catch {} return; }
+    let trying = null;
+    try {
+      // Zwift devices are found by their maker's id (0x094A) or name as well as the service, since not all of them list
+      // the service when they announce themselves. Shift-click lists everything nearby, to see what a device calls itself.
+      const want = e.shiftKey ? { acceptAllDevices: true }
+        : { filters: [{ services: [ZRIDE] }, { services: [ZOLD] }, { manufacturerData: [{ companyIdentifier: 0x094A }] }, { namePrefix: 'Zwift' }, { services: [SVC] }] };
+      const dev = await navigator.bluetooth.requestDevice({ ...want, optionalServices: [ZRIDE, ZOLD, SVC, 'device_information'] });
+      trying = dev; pad.name = dev.name || 'unnamed device';
+      const gatt = await step('Connecting…', dev.gatt.connect(), 20000);
+      dev.addEventListener('gattserverdisconnected', () => { const was = pad.dev; pad.dev = pad.haptic = pad.rx = null; pad.held = 0; if (was) label('Connect controller'); }, { once: true });
+      let svc = null; try { svc = await step('Looking for buttons…', gatt.getPrimaryService(SVC)); } catch (err) { if (err.stuck) throw err; }
+      if (!svc) { await joinRide(gatt); pad.dev = dev; label('Controller: ready'); return; }
+      const ch = await svc.getCharacteristic(BUTTONS);
+      ch.addEventListener('characteristicvaluechanged', e => onButtons(e.target.value));
+      await ch.startNotifications();
+      pad.dev = dev; pad.down.clear();
+      try { pad.haptic = await svc.getCharacteristic(HAPTIC); } catch { pad.haptic = null; }
+      try {                                              // tell the controller who we are and which buttons we use
+        const txt = t => [t.length, ...new TextEncoder().encode(t)], ids = Object.keys(ACT).map(Number);
+        const info = await svc.getCharacteristic(APPINFO);
+        await info.writeValueWithoutResponse(new Uint8Array([0x04, 0x01, ...txt('golden-hour-ride'), ...txt('1.0'), ids.length, ...ids]));
+      } catch {}
+      label('Controller: ready');
+    } catch (err) {
+      if (pad.dev) return;
+      try { if (trying) trying.gatt.disconnect(); } catch {}
+      const picked = !(err && err.name === 'NotFoundError' && !trying);
+      label(!picked ? 'Connect controller' : err && err.locked ? 'Controller locked: open Zwift first' : err && err.stuck ? 'No answer: ' + err.stuck.replace('…', '').toLowerCase() : 'Controller: failed');
+      if (picked) btn.title = pad.name + (err && err.locked
+        ? (err.fw ? ' (firmware ' + err.fw.trim() + ')' : '') + ' connected, but is not offering its buttons. Newer Zwift handlebars only answer other apps after Zwift has unlocked them: open Zwift, let it connect to the handlebars, close it, then try again. It offered: ' + (err.seen || 'nothing we may read')
+        : err && err.stuck ? ' did not answer while: ' + err.stuck + ' If two devices share a name, try the other one. Wake it with a button press and make sure nothing else is connected to it.'
+        : ' failed with: ' + (err && (err.message || err.name)));
+    }
+  });
+}
+
 /* ---------- ride log: distance ridden, kept in this browser (localStorage) ---------- */
 {
   const KEY = 'golden-hour-ride-log', MIN = 100;         // rides under 100 m are not kept
@@ -1720,12 +2059,14 @@ $('hrbtn').addEventListener('click', async () => {
   let last = performance.now(), ok = true;
   const save = () => {
     const now = performance.now();
-    if (!document.hidden) ride.s += Math.min(10, (now - last) / 1000);
+    if (!document.hidden && !st.stopped) ride.s += Math.min(10, (now - last) / 1000);
     last = now; ride.m = Math.round(st.dist);
     if (ride.m < MIN) return;
     const all = load().filter(r => r.t !== ride.t); all.push({ ...ride, s: Math.round(ride.s) });
     try { localStorage.setItem(KEY, JSON.stringify(all.slice(-300))); ok = true; } catch { ok = false; }
   };
+  st.saveRide = save;
+  st.newRide = () => { save(); ride.t = new Date().toISOString(); ride.s = 0; ride.m = 0; last = performance.now(); };   // the ride so far stays in the log; a new entry begins
   const km = m => (m / 1000).toFixed(m < 99950 ? 1 : 0), box = $('log'), btn = $('logbtn');
   const day = t => new Date(t).toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
   const mins = s => s < 3600 ? Math.round(s / 60) + ' min' : Math.floor(s / 3600) + ' h ' + Math.round(s % 3600 / 60) + ' min';
@@ -2064,23 +2405,43 @@ let coachWinOn = keep.get(COACHWIN_KEY, true) !== false;
 /* ---------- voice: change the weather, or skip, by speaking ---------- */
 {
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition, btn = $('voice');
+  // a gear by number: "gear four", "gear 4", "fourth gear", or just "four" or "4" said alone
+  const NUM = { one: 1, two: 2, to: 2, too: 2, three: 3, four: 4, for: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10, eleven: 11, twelve: 12,
+    first: 1, second: 2, third: 3, fourth: 4, fifth: 5, sixth: 6, seventh: 7, eighth: 8, ninth: 9, tenth: 10, eleventh: 11, twelfth: 12 };
+  const GEAR_SAID = new RegExp('\\bgear (?:number )?(\\d{1,2}|one|two|to|too|three|four|for|five|six|seven|eight|nine|ten|eleven|twelve)\\b'
+    + '|\\b(\\d{1,2}(?:st|nd|rd|th)|first|second|third|fourth|fifth|sixth|seventh|eighth|ninth|tenth|eleventh|twelfth) gear\\b'
+    + '|^\\s*(\\d{1,2}|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve)[.!]?\\s*$');
+  const gearSaid = m => { const w = m[1] || m[2] || m[3], n = NUM[w] || parseInt(w, 10); if (n >= 1 && n <= GEARS) setGear(n); };
+  st.say = heard => { const hit = WORDS.find(w => w[0].test(heard)); if (hit) hit[2](heard.match(hit[0])); return hit ? (typeof hit[1] === 'function' ? hit[1]() : hit[1]) : null; };   // for testing without a microphone
+  const NOW = () => document.querySelector('#wx .on')?.textContent || '';   // the weather actually showing, in case this season has no such weather
   const WORDS = [                      // the first match in what was heard wins
-    [/\b(easier|easy|lighter|less|ease|gear down|shift down|change down|lower gear|down a gear)\b/, () => $('hval').textContent, () => setHills(HILLS * 100 - 20)],
-    [/\b(harder|hard|heavier|more|tougher|gear up|shift up|change up|higher gear|up a gear)\b/, () => $('hval').textContent, () => setHills(HILLS * 100 + 20)],
+    [GEAR_SAID, () => 'Gear ' + GEAR, gearSaid],
+    [/\b(gear down|shift down|change down|lower gear|down a gear)\b/, () => 'Gear ' + GEAR, () => setGear(GEAR - 1)],
+    [/\b(gear up|shift up|change up|higher gear|up a gear)\b/, () => 'Gear ' + GEAR, () => setGear(GEAR + 1)],
+    [/\b(easier|easy|lighter|less|ease)\b/, () => $('hval').textContent, () => setHills(HILLS * 100 - 20)],
+    [/\b(harder|hard|heavier|more|tougher)\b/, () => $('hval').textContent, () => setHills(HILLS * 100 + 20)],
     [/\b(flat|no hills|hills off)\b/, () => $('hval').textContent, () => setHills(0)],
     [/\b(full|real hills|all of it)\b/, () => $('hval').textContent, () => setHills(100)],
-    ...(XMAS ? [[/\b(snow|snowing|snowy|christmas)\b/, 'Snow', () => setWeather('snow')]] : []),
-    [/\b(rain|raining|rainy|storm|wet)\b/, 'Rain', () => setWeather('rain')],
-    [/\b(mist|misty|fog|foggy)\b/, 'Mist', () => setWeather('mist')],
-    [/\b(overcast|cloud|clouds|cloudy|grey|gray)\b/, 'Overcast', () => setWeather('overcast')],
-    [/\b(golden|sun|sunny|sunshine|sunset|clear|evening)\b/, 'Golden', () => setWeather('golden')],
-    ...(LAB ? [[/\b(starry|stars|night|painting|van gogh)\b/, 'Starry', () => setWeather('starry')]] : []),
+    ...(XMAS ? [[/\b(snow|snowing|snowy|christmas)\b/, NOW, () => setWeather('snow')]] : []),
+    [/\b(rain|raining|rainy|storm|wet)\b/, NOW, () => setWeather('rain')],
+    [/\b(mist|misty|fog|foggy)\b/, NOW, () => setWeather('mist')],
+    [/\b(overcast|cloud|clouds|cloudy|grey|gray)\b/, NOW, () => setWeather('overcast')],
+    [/\b(golden|sun|sunny|sunshine|sunset|clear|evening)\b/, NOW, () => setWeather('golden')],
+    [/\bghost off\b/, () => setGhost(false), () => {}],
+    [/\bghost\b/, () => bestGhost ? setGhost(true) : 'No ghost yet', () => {}],
+    [/\b(stop|pause|finish)\b/, 'Stopped', () => stopRide()],
+    [/\b(keep riding|carry on|resume|continue|start)\b/, 'Riding', () => resumeRide()],
     [/\b(skip|forward|ahead)\b/, 'Skip ahead', () => skip(250)],
     [/\bback\b/, 'Skip back', () => skip(-250)],
     [/\b(hide|hidden)\b/, 'Info hidden', () => setClean(true)],
     [/\b(show|info|display)\b/, 'Info shown', () => setClean(false)]];
   let rec = null, on = false, last = 0;
-  const label = t => { btn.textContent = t; btn.classList.toggle('on', on); };
+  // Voice is a row in Devices: a line of status and a switch. Whatever it acts on also flashes up as a toast.
+  const label = t => {
+    const said = t.replace('Voice: ', ''), plain = { off: 'Off', listening: 'Listening', blocked: 'Blocked: allow the microphone', 'needs Chrome': 'Needs Chrome or Edge' }[said];
+    btn.textContent = on ? 'Turn off' : 'Turn on'; $('dd-voice').className = 'dd' + (on ? ' ok' : '');
+    $('ds-voice').textContent = plain || 'Heard: ' + said; if (!plain) toast(said);
+  };
   if (!SR) { btn.title = 'Voice control needs Chrome or Edge'; btn.addEventListener('click', () => label('Voice: needs Chrome')); }
   else btn.addEventListener('click', () => {
     if (on) { on = false; rec.stop(); label('Voice: off'); return; }
@@ -2088,7 +2449,7 @@ let coachWinOn = keep.get(COACHWIN_KEY, true) !== false;
     rec.onresult = e => {
       for (let i = e.resultIndex; i < e.results.length; i++) {
         const heard = e.results[i][0].transcript.toLowerCase(), hit = WORDS.find(w => w[0].test(heard));
-        if (hit && performance.now() - last > 2500) { last = performance.now(); hit[2](); label('Voice: ' + (typeof hit[1] === 'function' ? hit[1]() : hit[1])); }
+        if (hit && performance.now() - last > 2500) { last = performance.now(); hit[2](heard.match(hit[0])); label('Voice: ' + (typeof hit[1] === 'function' ? hit[1]() : hit[1])); }
       }
     };
     rec.onend = () => { if (on) { try { rec.start(); } catch (err) {} } };          // the browser stops listening after a silence, so start again
@@ -2110,17 +2471,272 @@ function startAudio() {
     src.connect(f).connect(g).connect(ac.destination); src.start();
     return { f, g };
   };
-  audio = { ac, wind: mk('bandpass', 500, 0.5), tyre: mk('lowpass', 240, 0.8), rain: mk('highpass', 2600, 0.5) };
+  audio = { ac, buf, wind: mk('bandpass', 500, 0.5), tyre: mk('lowpass', 240, 0.8), rain: mk('highpass', 2600, 0.5) };
+  if (XMAS) startXmas(audio);
 }
+
+/* ---------- Christmas sounds, all made here rather than loaded: snow crunching under the tyres, a sleigh going by
+   now and then, a church far down the valley ringing rounds, and a fire and a music box from each chalet as you pass ---------- */
+let xmas = null;
+function startXmas(a) {
+  const { ac, buf } = a;
+  // one shared hall: a long, soft echo made from decaying noise, for things heard across the valley
+  const ir = ac.createBuffer(2, ac.sampleRate * 3.5, ac.sampleRate);
+  for (let ch = 0; ch < 2; ch++) { const d = ir.getChannelData(ch); for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / d.length, 3.2); }
+  const hall = ac.createConvolver(); hall.buffer = ir; hall.connect(ac.destination);
+  const bus = (wet, dry = 1) => {                          // a gain that feeds the speakers and some of the hall
+    const g = ac.createGain(), p = ac.createStereoPanner(), w = ac.createGain(), o = ac.createGain();
+    g.connect(p); p.connect(o).connect(ac.destination); p.connect(w).connect(hall); o.gain.value = dry; w.gain.value = wet;
+    return { g, p };
+  };
+  xmas = {
+    crunch: bus(0.05), sleigh: bus(0.35), church: bus(0.9, 0.25), house: bus(0.12),
+    nextSleigh: ac.currentTime + 25 + Math.random() * 20, nextChurch: ac.currentTime + 45 + Math.random() * 30,
+    grain: 0, pop: 0, box: { i: 0, t: 0, on: false },
+  };
+  const lp = ac.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 1600;   // the church is far away: no sparkle left
+  xmas.church.p.disconnect(); xmas.church.p.connect(lp);
+  for (const n of [ac.destination, hall]) { const g = ac.createGain(); g.gain.value = n === hall ? 0.9 : 0.25; lp.connect(g).connect(n); }
+  xmas.house.g.gain.value = 0;
+}
+
+// a struck metal sound: a few sine partials, each dying away on its own
+function strike(t, f, parts, gain, out) {
+  const ac = audio.ac;
+  for (const [ratio, amp, decay] of parts) {
+    const o = ac.createOscillator(), g = ac.createGain();
+    o.frequency.value = f * ratio;
+    g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(gain * amp, t + 0.004); g.gain.exponentialRampToValueAtTime(0.0001, t + decay);
+    o.connect(g).connect(out); o.start(t); o.stop(t + decay + 0.05);
+  }
+}
+// a short burst of the noise through a filter: one crunch of snow, one crackle of the fire
+function grain(t, dur, type, freq, q, gain, out) {
+  const ac = audio.ac, s = ac.createBufferSource(), f = ac.createBiquadFilter(), g = ac.createGain();
+  s.buffer = audio.buf; f.type = type; f.frequency.value = freq; f.Q.value = q;
+  g.gain.setValueAtTime(gain, t); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  s.connect(f).connect(g).connect(out); s.start(t, Math.random() * 1.8, dur + 0.01);
+}
+
+const SLEIGH = [[1, 1, 0.22], [1.52, 0.7, 0.16], [2.32, 0.5, 0.11], [3.1, 0.3, 0.08]];
+function sleighBy() {                                       // a sleigh passes, left to right or right to left, about four seconds
+  const ac = audio.ac, t0 = ac.currentTime + 0.05, len = 4.2, from = Math.random() < 0.5 ? -0.8 : 0.8;
+  const { g, p } = xmas.sleigh, shake = Math.max(0.11, 0.24 - st.v * 0.01);   // ride faster, and the bells shake faster
+  g.gain.cancelScheduledValues(t0); g.gain.setValueAtTime(0, t0); g.gain.linearRampToValueAtTime(0.25, t0 + len * 0.45); g.gain.linearRampToValueAtTime(0, t0 + len);
+  p.pan.cancelScheduledValues(t0); p.pan.setValueAtTime(from, t0); p.pan.linearRampToValueAtTime(-from, t0 + len);
+  for (let t = t0; t < t0 + len; t += shake * (0.9 + Math.random() * 0.2))
+    for (let k = 3 + Math.random() * 4 | 0; k > 0; k--) strike(t + Math.random() * 0.035, 2300 + Math.random() * 900, SLEIGH, 0.05, g);
+  return 'Sleigh';
+}
+
+const CHURCH = [[0.5, 0.5, 6], [1, 1, 4.5], [1.2, 0.55, 3.6], [1.5, 0.35, 3], [2, 0.4, 2.4], [2.5, 0.18, 1.8], [3, 0.12, 1.4]];
+function churchBells() {                                    // rounds on six bells, three times through, from down the valley
+  const ac = audio.ac, t0 = ac.currentTime + 0.05, notes = [392, 349.2, 329.6, 293.7, 261.6, 246.9], g = xmas.church.g;
+  g.gain.cancelScheduledValues(t0); g.gain.setValueAtTime(0.06, t0);
+  xmas.church.p.pan.value = Math.random() * 1.2 - 0.6;
+  for (let r = 0; r < 3; r++) notes.forEach((f, i) => strike(t0 + (r * 7 + i) * 0.62, f * (1 + (Math.random() - 0.5) * 0.004), CHURCH, 0.12, g));
+  return 'Bells';
+}
+
+// Silent Night (Franz Gruber, 1818), as a music box plays it: [note, beats]
+const BOX = [[79,1.5],[81,.5],[79,1],[76,3],[79,1.5],[81,.5],[79,1],[76,3],[86,2],[86,1],[83,3],[84,2],[84,1],[79,3],
+  [81,2],[81,1],[84,1.5],[83,.5],[81,1],[79,1.5],[81,.5],[79,1],[76,3],[81,2],[81,1],[84,1.5],[83,.5],[81,1],[79,1.5],[81,.5],[79,1],[76,3],
+  [86,2],[86,1],[89,1.5],[86,.5],[83,1],[84,3],[88,3],[84,1.5],[79,.5],[76,1],[79,1.5],[77,.5],[74,1],[72,6]];
+const BOX_TINE = [[1, 1, 1.6], [3, 0.18, 0.4], [5.4, 0.06, 0.15]];
+
+function stepXmas(dt) {
+  const ac = audio.ac, t = ac.currentTime, x = xmas;
+  // snow under the tyres: many small soft crunches, more of them the faster you go
+  x.grain += Math.min(32, st.v * 3.2) * dt * (st.v > 0.5);
+  for (; x.grain >= 1; x.grain--) grain(t + Math.random() * 0.03, 0.02 + Math.random() * 0.04, 'bandpass', 650 + Math.random() * 900, 1.2, 0.08 + Math.random() * 0.1, x.crunch.g);
+  x.crunch.g.gain.setTargetAtTime(Math.min(1, st.v / 9) * 1.1, t, 0.2);
+  if (t > x.nextSleigh) { sleighBy(); x.nextSleigh = t + 60 + Math.random() * 70; }
+  if (t > x.nextChurch) { churchBells(); x.nextChurch = t + 200 + Math.random() * 150; }
+  // the nearest chalet: how near, and which side
+  let best = 1e9, cx = 0, cz = 0;
+  for (const c of chalets) { const d = (c[0] - camera.position.x) ** 2 + (c[1] - camera.position.z) ** 2; if (d < best) { best = d; cx = c[0]; cz = c[1]; } }
+  const dist = Math.sqrt(best), near = Math.max(0, 1 - dist / 110) ** 2;
+  x.house.g.gain.setTargetAtTime(near * 0.9, t, 0.3);
+  if (near > 0) {
+    const e = camera.matrixWorld.elements, dx = cx - camera.position.x, dz = cz - camera.position.z;
+    x.house.p.pan.setTargetAtTime(Math.max(-0.9, Math.min(0.9, (e[0] * dx + e[2] * dz) / (dist || 1))), t, 0.2);
+    x.pop += (8 + Math.random() * 14) * dt;                // the fire: small crackles, and now and then a bigger snap
+    for (; x.pop >= 1; x.pop--) grain(t + Math.random() * 0.05, 0.004 + Math.random() * 0.01, 'highpass', 1500 + Math.random() * 2500, 0.7, Math.random() < 0.1 ? 0.5 : 0.12, x.house.g);
+    const b = x.box;
+    if (!b.on) { b.on = true; b.i = 0; b.t = t + 0.3; }
+    while (b.t < t + 0.25) {
+      const [m, beats] = BOX[b.i];
+      strike(b.t, 440 * 2 ** ((m - 69) / 12), BOX_TINE, 0.05, x.house.g);
+      b.t += beats * 0.4; b.i++;
+      if (b.i === BOX.length) { b.i = 0; b.t += 2.5; }
+    }
+  } else x.box.on = false;                                  // out of earshot; the tune starts again at the next chalet
+}
+st.sleigh = () => audio && xmas ? sleighBy() : 'No sound yet'; st.church = () => audio && xmas ? churchBells() : 'No sound yet'; st.audio = () => ({ audio, xmas });
 addEventListener('pointerdown', startAudio); addEventListener('keydown', startAudio);
 
 /* ---------- ride ---------- */
 const RIDER_KG = 62, BIKE_KG = 9.6, MASS = RIDER_KG + BIKE_KG, LANE = -1.75, clock = new THREE.Clock();   // MASS: what gravity pulls up the hill
 const pose = mkPose(), ahead = mkPose(), probe = mkPose(), look = new V3(), sunNdc = new V3(), fwd = new V3();
+
+/* ---------- pacer: a computer rider who holds a steady power on the same road ----------
+   The pacer is kept as a gap in metres from you (plus = up the road), so skipping along the course carries them with you.
+   Their speed comes from the same sum as yours: power against gravity, rolling resistance and air drag for the same weight. */
+const pacer = { on: false, watts: 180, pw: 180, v: 6, gap: 0, wait: true, secs: 0, crank: 0, pose: mkPose(), rig: new THREE.Group(), legs: [] };
+// A rider on a bike, built from tubes. The pacer is solid with an amber jersey; the ghost is the same rider, see-through.
+function buildRider(who, ghost) {
+  const mat = (c, r = 0.8) => ghost
+    ? new THREE.MeshStandardMaterial({ color: 0xcfe6ff, emissive: 0x3f7fd0, emissiveIntensity: 0.9, roughness: 0.5, transparent: true, opacity: 0.62, depthWrite: false })
+    : new THREE.MeshStandardMaterial({ color: c, roughness: r });
+  const dark = mat(0x16181b, 0.6), jersey = mat(0xffb347), skin = mat(0xc08a68), helmet = mat(0xf2f0ea, 0.5);
+  const Y = new V3(0, 1, 0), d = new V3(), stick = (m, a, b) => {            // lay a unit-high cylinder from a to b
+    d.subVectors(b, a); const len = d.length();
+    m.position.copy(a).addScaledVector(d, 0.5); m.scale.set(1, len, 1); m.quaternion.setFromUnitVectors(Y, d.divideScalar(len)); return m;
+  };
+  const tube = (a, b, r, m) => { const t = stick(new THREE.Mesh(new THREE.CylinderGeometry(r, r, 1, 8), m), new V3(...a), new V3(...b)); who.rig.add(t); return t; };
+  for (const z of [-0.5, 0.5]) { const w = new THREE.Mesh(new THREE.TorusGeometry(0.31, 0.03, 8, 22), dark); w.rotation.y = Math.PI / 2; w.position.set(0, 0.34, z); who.rig.add(w); }
+  const bb = [0, 0.3, -0.05], seat = [0, 0.95, -0.25], head = [0, 0.92, 0.38];
+  for (const [a, b] of [[bb, seat], [seat, head], [bb, head], [bb, [0, 0.34, -0.5]], [seat, [0, 0.34, -0.5]], [head, [0, 0.34, 0.5]]]) tube(a, b, 0.018, dark);
+  tube([-0.2, 0.98, 0.42], [0.2, 0.98, 0.42], 0.016, dark);                                     // handlebars
+  tube([0, 1.0, -0.22], [0, 1.27, 0.24], 0.15, jersey);                                         // back, bent over the bars
+  for (const x of [-0.17, 0.17]) tube([x, 1.26, 0.22], [x, 0.99, 0.42], 0.045, jersey);         // arms
+  const h = new THREE.Mesh(new THREE.SphereGeometry(0.115, 14, 10), helmet); h.position.set(0, 1.42, 0.36); who.rig.add(h);
+  for (const x of [-0.1, 0.1]) who.legs.push({ x, thigh: tube([x, 1, -0.2], [x, 0.6, 0.1], 0.065, dark), shin: tube([x, 0.6, 0.1], [x, 0.3, 0], 0.045, skin) });
+  who.rig.traverse(o => { if (o.isMesh) { o.castShadow = !ghost; o.frustumCulled = false; } });   // a ghost casts no shadow
+  who.rig.visible = false; scene.add(who.rig);
+  const hip = new V3(), knee = new V3(), foot = new V3();
+  who.pedal = () => {                                      // each foot goes round the crank; the knee sits where thigh and shin can both reach
+    who.legs.forEach((leg, i) => {
+      const a = who.crank + i * Math.PI;
+      hip.set(leg.x, 1, -0.2); foot.set(leg.x, 0.3 + 0.17 * Math.cos(a), -0.05 + 0.17 * Math.sin(a));
+      const reach = Math.min(0.86, hip.distanceTo(foot)), up = Math.sqrt(Math.max(0, 0.44 * 0.44 - reach * reach / 4));
+      knee.lerpVectors(hip, foot, 0.5); knee.z += up * 0.9; knee.y += up * 0.3;
+      stick(leg.thigh, hip, knee); stick(leg.shin, knee, foot);
+    });
+  };
+  who.pedal();
+}
+buildRider(pacer, false);
+const gapText = () => {                                    // seconds between you: minus when they are ahead, plus when you are
+  const t = Math.round(Math.abs(pacer.secs)); if (!t) return '0 s';
+  return (pacer.secs > 0 ? '−' : '+') + (t < 100 ? t + ' s' : Math.floor(t / 60) + ':' + String(t % 60).padStart(2, '0'));
+};
+const pacerLabel = () => { $('h-pw2').textContent = 'pacer · ' + pacer.watts + ' W'; $('pacer').textContent = pacer.on ? 'Pacer: ' + pacer.watts + ' W' : 'Pacer: off'; $('pacer').classList.toggle('on', pacer.on); };
+const setPacer = on => {
+  pacer.on = on;
+  if (on) {                                                // they start beside you, at your speed; the first time, at about your own effort
+    if (!pacer.set) { pacer.set = true; pacer.watts = Math.max(50, Math.min(500, Math.round((st.time > 60 ? st.work / st.time : st.power) / 10) * 10)); }
+    pacer.gap = 6; pacer.v = st.v; pacer.pw = pacer.watts; pacer.secs = 0;   // a bike length or two up the road, where you can see them
+  }
+  pacer.rig.visible = on;
+  pacerLabel();
+};
+const setPacerWatts = w => { pacer.watts = Math.max(50, Math.min(500, Math.round(w / 10) * 10)); pacer.set = true; pacerLabel(); };
+$('pacer').addEventListener('click', () => setPacer(!pacer.on));
+$('pless').addEventListener('click', () => setPacerWatts(pacer.watts - 10));
+$('pmore').addEventListener('click', () => setPacerWatts(pacer.watts + 10));
+for (const b of $('pwait').children) b.addEventListener('click', () => { pacer.wait = b.dataset.wait === '1'; for (const c of $('pwait').children) c.classList.toggle('on', c === b); });
+st.pacer = pacer; st.setPacer = setPacer;                  // for testing
+st.pacerReset = () => { if (pacer.on) setPacer(true); };
+st.pacerResult = () => {
+  if (!pacer.on || st.dist < 100) return '';
+  const t = Math.round(Math.abs(pacer.secs)), by = t < 100 ? t + ' s' : Math.floor(t / 60) + ' min ' + (t % 60) + ' s';
+  return !t ? `Level with the ${pacer.watts} W pacer` : pacer.secs > 0 ? `The ${pacer.watts} W pacer is ${by} ahead of you` : `You are ${by} ahead of the ${pacer.watts} W pacer`;
+};
+const tagAt = new V3();                                   // (their watts sit under the gap, bottom left; the amber jersey is the only marker on the road)
+function stepPacer(dt) {
+  if (!pacer.on) return;
+  const pp = at(st.s + pacer.gap, pacer.pose);
+  if (!st.stopped) {
+    // a friendly pacer eases to just over half power while you are more than 20 seconds behind
+    const want = pacer.wait && pacer.secs > 20 ? pacer.watts * 0.55 : pacer.watts;
+    pacer.pw += (want - pacer.pw) * Math.min(1, dt * 1.5);
+    const v = pacer.v, slope = pp.t.y > 0 ? pp.t.y : pp.t.y * 0.5, brake = v > 15 ? MASS * 0.5 * (v - 15) : 0;
+    const force = pacer.pw / Math.max(v, 2) - MASS * 9.81 * (slope + 0.004) - 0.5 * 1.2 * 0.32 * v * v - brake;
+    pacer.v = Math.max(0.5, v + force / MASS * dt);
+    pacer.gap += (pacer.v - st.v) * dt;
+    pacer.secs = pacer.gap > 0 ? pacer.gap / Math.max(st.v, 1.5) : pacer.gap / Math.max(pacer.v, 1.5);
+    pacer.crank += dt * Math.PI * 2 * 85 / 60; pacer.pedal();
+  }
+  at(st.s + pacer.gap, pp);
+  pacer.rig.position.copy(pp.p).addScaledVector(pp.r, LANE + 0.9);   // a little nearer the middle of the road than you, so you can ride past
+  tagAt.copy(pacer.rig.position).add(pp.t); pacer.rig.lookAt(tagAt);
+}
+
+/* ---------- ghost: your fastest ride on this course, ridden again beside you ----------
+   Every ride is traced as its distance at each whole second. When you stop (or leave) after at least five minutes, and
+   the ride was faster on average than the ghost kept for this course, it becomes the new ghost (kept in this browser).
+   Turned on, the ghost sets off beside you and replays that ride second by second. Like the pacer it is kept as a gap,
+   so skipping along the course carries it with you, and it waits while you are stopped. */
+const GHOST_KEY = 'golden-hour-ride-ghost-' + COURSE, GHOST_MIN = 300, GHOST_MAX = 10800;   // five minutes at least, three hours at most
+const ghost = { on: false, rec: null, t0: 0, d0: 0, gap: 0, secs: 0, done: false, crank: 0, pose: mkPose(), rig: new THREE.Group(), legs: [] };
+buildRider(ghost, true);
+const trace = [];                                        // this ride: metres ridden at second 0, 1, 2, ...
+let traceId = new Date().toISOString();                  // which ride the trace is, so leaving the tab mid-ride and stopping later updates one ghost
+const loadGhost = () => { try { const g = JSON.parse(localStorage.getItem(GHOST_KEY)); return g && Array.isArray(g.d) && g.d.length > GHOST_MIN ? g : null; } catch { return null; } };
+let bestGhost = loadGhost();
+const ghostKmh = d => (d[d.length - 1] - d[0]) / (d.length - 1) * 3.6;
+// keep this ride as the ghost if it is long enough and faster than the one kept; true when it was
+const keepGhost = () => {
+  if (trace.length - 1 < GHOST_MIN) return false;
+  const same = bestGhost && bestGhost.t === traceId;       // this ride is already the ghost: keep the longer trace of it
+  if (bestGhost && (same ? trace.length <= bestGhost.d.length : ghostKmh(trace) <= ghostKmh(bestGhost.d))) return false;
+  bestGhost = { t: traceId, d: trace.slice() };
+  try { localStorage.setItem(GHOST_KEY, JSON.stringify(bestGhost)); } catch {}
+  ghostLabel(); return true;
+};
+addEventListener('pagehide', keepGhost);
+document.addEventListener('visibilitychange', () => { if (document.hidden) keepGhost(); });
+const ghostLabel = () => {
+  const b = $('ghost');
+  b.disabled = !bestGhost && !ghost.on;
+  b.textContent = ghost.on ? 'Ghost: on' : bestGhost ? 'Ghost: ' + ghostKmh(bestGhost.d).toFixed(1) + ' km/h' : 'Ghost: none yet';
+  b.classList.toggle('on', ghost.on);
+  b.title = bestGhost
+    ? `Your fastest ride here (${Math.round((bestGhost.d.length - 1) / 60)} min on ${new Date(bestGhost.t).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}), ridden again beside you. Beat it and your ride becomes the ghost.`
+    : 'Ride here for five minutes or more, then stop, and your fastest ride comes back as a see-through rider to race.';
+};
+const setGhost = on => {
+  ghost.on = on && !!bestGhost;
+  if (ghost.on) { ghost.rec = bestGhost; ghost.t0 = st.time; ghost.d0 = st.dist; ghost.gap = 0; ghost.secs = 0; ghost.done = false; }
+  ghost.rig.visible = ghost.on;
+  ghostLabel();
+  return ghost.on ? 'Ghost on' : 'Ghost off';
+};
+$('ghost').addEventListener('click', () => setGhost(!ghost.on));
+ghostLabel();
+st.ghost = ghost; st.setGhost = setGhost; st.keepGhost = keepGhost; st.trace = trace;   // for testing
+st.ghostReset = () => { trace.length = 0; traceId = new Date().toISOString(); if (ghost.on) setGhost(true); };
+const ghostGapText = () => {                               // as the pacer's gap: minus when the ghost is ahead
+  if (ghost.done) return 'done';
+  const t = Math.round(Math.abs(ghost.secs)); if (!t) return '0 s';
+  return (ghost.secs > 0 ? '−' : '+') + (t < 100 ? t + ' s' : Math.floor(t / 60) + ':' + String(t % 60).padStart(2, '0'));
+};
+st.ghostResult = () => {
+  if (!ghost.on || st.time - ghost.t0 < 30) return '';
+  if (ghost.done) return 'You outlasted your ghost: its ride was shorter than yours';
+  const t = Math.round(Math.abs(ghost.secs)), by = t < 100 ? t + ' s' : Math.floor(t / 60) + ' min ' + (t % 60) + ' s';
+  return !t ? 'Level with your ghost' : ghost.secs > 0 ? `Your ghost is ${by} ahead of you` : `You are ${by} ahead of your ghost`;
+};
+function stepGhost(dt) {
+  if (!st.stopped) while (trace.length <= st.time && trace.length <= GHOST_MAX) trace.push(Math.round(st.dist * 10) / 10);
+  if (!ghost.on || ghost.done) return;
+  const d = ghost.rec.d, n = st.time - ghost.t0, i = Math.floor(n);
+  if (i >= d.length - 1) { ghost.done = true; ghost.rig.visible = false; return; }   // its ride has run out
+  const gd = d[i] + (d[i + 1] - d[i]) * (n - i) - d[0], gv = d[i + 1] - d[i];
+  ghost.gap = gd - (st.dist - ghost.d0);
+  ghost.secs = ghost.gap > 0 ? ghost.gap / Math.max(st.v, 1.5) : ghost.gap / Math.max(gv, 1.5);
+  if (!st.stopped && gv > 0.3) { ghost.crank += dt * Math.PI * 2 * 85 / 60; ghost.pedal(); }
+  const pp = at(st.s + ghost.gap, ghost.pose);
+  ghost.rig.position.copy(pp.p).addScaledVector(pp.r, LANE + (pacer.on ? 1.6 : 0.9));   // the pacer's line, or beside it when both ride
+  tagAt.copy(ghost.rig.position).add(pp.t); ghost.rig.lookAt(tagAt);
+}
 let lean = 0, phase = 0, grade = 0, huT = 0, first = true;
 // scenery mode's weather, in order, and how many seconds each one stays
 const SCENE_PLAN = XMAS ? [['snow', 280], ['mist', 100], ['snow', 180], ['golden', 95]] : [['golden', 200], ['mist', 110], ['rain', 130], ['overcast', 70], ['golden', 90]];
 let scene_t = 0, scene_i = 0;
+// the first time someone opens the ride in this browser, Devices opens by itself as the "get ready" step
+try { if (SCENERY === null && !localStorage.getItem('golden-hour-ride-welcomed')) { localStorage.setItem('golden-hour-ride-welcomed', '1'); setDevices(true); } } catch {}
 if (SCENERY !== null) { setClean(true); st.target = st.power = 90; if (SCENERY === 'nobars') rig.visible = false; }
 
 function tick() {
@@ -2139,7 +2755,14 @@ function tick() {
     scene_t += dt;
     if (scene_t >= SCENE_PLAN[scene_i][1]) { scene_t = 0; scene_i = (scene_i + 1) % SCENE_PLAN.length; setWeather(SCENE_PLAN[scene_i][0]); }
   }
-  st.s = (st.s + st.v * dt) % LEN; st.dist += st.v * dt;
+  if (st.stopped) st.v = Math.max(0, v - 5 * dt);          // roll to a halt; nothing counts while stopped
+  else {
+    st.dist += st.v * dt; st.time += dt; st.work += st.power * dt; if (pose.t.y > 0) st.climb += pose.t.y * st.v * dt;
+    if (st.time - st.sampled >= 1 && st.track.length < 43200) {          // one point a second for the ride file, up to twelve hours
+      st.sampled = st.time; st.track.push([Date.now(), pose.p.x, pose.p.y, pose.p.z, st.dist, st.v, st.power]);
+    }
+  }
+  st.s = (st.s + st.v * dt) % LEN;
   grade += (pose.t.y * 100 - grade) * Math.min(1, dt * 2);
 
   // camera: follow the lane, look down the road, lean into bends, rock with the pedals
@@ -2158,6 +2781,8 @@ function tick() {
   const fov = 62 + Math.min(st.v, 20) * 0.75;
   if (Math.abs(fov - camera.fov) > 0.01) { camera.fov = fov; camera.updateProjectionMatrix(); }
 
+  stepPacer(dt);
+  stepGhost(dt);
   stepWeather(dt);
   stepWorkout(dt);
   if (st.power >= 10) st.time += dt;                      // riding time: stops while you are not pedalling

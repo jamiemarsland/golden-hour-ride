@@ -1,8 +1,14 @@
 #!/bin/sh
-# Publish the ride to Spacefast. Rebuilds dist/ from the live page and its data,
-# keeping dist/.spacefast so each publish updates the same space.
+# Publish the ride to Spacefast.
+# Builds dist/ from the ride and its data, plus the phone gear shifter in remote/ (a small relay on Spacefast's
+# Zero runtime, the phone page, and the laptop script added to the ride). Spacefast builds it on its own servers,
+# which needs dist/ to be a git repository, so dist/.git is kept between publishes, as is dist/.spacefast,
+# which links dist/ to the live space.
 # Left out on purpose: the old index.v*.html backups, the tools/ scripts, and assets/textures.js
 # (a 21 MB embedded copy of the textures, only needed when the page is opened straight from disk).
+#   ./deploy.sh "message"     publish and make it live
+# Every publish goes live straight away. (Asking for a preview did not stop a build from the main branch going live.)
+# To undo a bad publish, from dist/:  sf rollback v26   (or whichever version number was live before)
 set -e
 cd "$(dirname "$0")"
 mkdir -p dist/assets

@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>Gear shifter</title>
+<style>
+  :root { color-scheme: dark; }
+  html, body { height: 100%; margin: 0; background: #14110d; color: #fff; font: 16px/1.3 -apple-system, "Segoe UI", Roboto, sans-serif; -webkit-user-select: none; user-select: none; touch-action: manipulation; }
+  main { height: 100%; box-sizing: border-box; display: flex; flex-direction: column; gap: 12px;
+    padding: max(14px, env(safe-area-inset-top)) max(14px, env(safe-area-inset-right)) max(14px, env(safe-area-inset-bottom)) max(14px, env(safe-area-inset-left)); }
+  #now { text-align: center; } #now b { display: block; font-size: 54px; font-weight: 300; line-height: 1; font-variant-numeric: tabular-nums; }
+  #now span { font-size: 11px; letter-spacing: .16em; text-transform: uppercase; opacity: .65; }
+  .small button { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; } .small small { font-size: 11px; opacity: .7; } .small small:empty { display: none; }
+  .small button.live { border-color: #ffcf8f; }
+  body { -webkit-touch-callout: none; }
+  #sheet { position: fixed; inset: 0; background: rgba(0,0,0,.55); display: flex; align-items: flex-end; }
+  #sheet[hidden] { display: none; }
+  #sheet .in { flex: 1; background: #1d1913; border-radius: 22px 22px 0 0; border-top: 1px solid rgba(255,255,255,.25); display: flex; flex-direction: column; gap: 10px;
+    padding: 16px max(14px, env(safe-area-inset-right)) max(18px, env(safe-area-inset-bottom)) max(14px, env(safe-area-inset-left)); }
+  #sheet h2 { margin: 0 0 2px; font-size: 12px; font-weight: 600; letter-spacing: .16em; text-transform: uppercase; opacity: .65; text-align: center; }
+  #sheet .opts { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  #sheet button { padding: 16px 8px; font-size: 16px; } #sheet button.sel { border-color: #ffcf8f; color: #ffcf8f; }
+  #sheet .big { font-size: 34px; font-weight: 300; text-align: center; font-variant-numeric: tabular-nums; }
+  #sheet .done { background: none; opacity: .8; }
+  #status { font-size: 13px; letter-spacing: .06em; opacity: .75; text-align: center; min-height: 18px; }
+  .gears { flex: 1; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .small { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+  button { font: inherit; color: #fff; background: #2a241c; border: 1px solid rgba(255,255,255,.3); border-radius: 22px; padding: 18px 8px; }
+  button:active, button.hit { background: #ffcf8f; color: #2a1b0a; border-color: #ffcf8f; }
+  .gears button { font-size: 64px; font-weight: 300; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; }
+  .gears small { font-size: 13px; letter-spacing: .14em; text-transform: uppercase; opacity: .7; }
+  #stop { background: #ffcf8f; color: #2a1b0a; border-color: #ffcf8f; font-weight: 600; }
+</style>
+</head>
+<body>
+<main>
+  <div id="status">Connecting…</div>
+  <div id="now"><b id="gear">–</b><span>gear</span></div>
+  <div class="gears">
+    <button data-a="gear-" aria-label="Gear down">−<small>easier</small></button>
+    <button data-a="gear+" aria-label="Gear up">+<small>harder</small></button>
+  </div>
+  <div class="small">
+    <button data-a="weather">Weather<small id="s-weather"></small></button>
+    <button data-a="pacer" id="b-pacer">Pacer<small id="s-pacer">off</small></button>
+    <button data-a="stop" id="stop"><span id="s-stop">Stop</span></button>
+  </div>
+</main>
+<div id="sheet" hidden><div class="in"><h2 id="sh-title"></h2><div id="sh-body"></div><button class="done" id="sh-done">Done</button></div></div>
+<script>
+  // The phone side of the remote. The pairing code comes from the QR code, after the # in the address.
+  const code = location.hash.slice(1).toLowerCase(), status = document.getElementById('status');
+  const say = t => { status.textContent = t; };
+  const send = async action => {
+    const t0 = performance.now();
+    try {
+      const r = await fetch('/api/remote/tap', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ code, action }) });
+      const j = await r.json();
+      if (!j.ok) throw new Error('refused');
+      say(action === 'hello' ? 'Connected' : 'Sent · ' + Math.round(performance.now() - t0) + ' ms');
+    } catch (err) { say('Not sent. Check the phone is online.'); }
+  };
+  // what the ride is doing, as the laptop last reported it: asked for shortly after each tap, and every few seconds
+  const $ = id => document.getElementById(id);
+  let last = null, sheetFor = '', holdGear = 0;
+  const shiftNow = up => {                                  // show the new gear at once; the ride confirms it a moment later
+    const g = parseInt($('gear').textContent, 10); if (!g) return;
+    $('gear').textContent = Math.max(1, Math.min(12, g + (up ? 1 : -1))); holdGear = Date.now() + 1500;
+  };
+  // Holding Weather or Pacer opens a sheet: pick a weather by name, or set the pacer's effort and manner.
+  const sheet = kind => {
+    sheetFor = kind; const s = last || {}, body = $('sh-body');
+    if (kind === 'weather') {
+      $('sh-title').textContent = 'Weather';
+      body.innerHTML = '<div class="opts">' + (s.weathers || []).map(([w, t]) => `<button data-a="weather:${w}" class="${t === s.weather ? 'sel' : ''}">${t}</button>`).join('') + '</div>';
+    } else {
+      $('sh-title').textContent = 'Pacer';
+      body.innerHTML = `<div class="big">${s.watts || '–'} W</div><div class="opts"><button data-a="pacer-">− 10 W</button><button data-a="pacer+">+ 10 W</button>`
+        + `<button data-a="pacer:on" class="${s.pacer ? 'sel' : ''}">On</button><button data-a="pacer:off" class="${s.pacer ? '' : 'sel'}">Off</button>`
+        + `<button data-a="pacer:wait" class="${s.wait ? 'sel' : ''}">Waits for you</button><button data-a="pacer:strict" class="${s.wait ? '' : 'sel'}">Strict</button></div>`;
+    }
+    for (const b of body.querySelectorAll('button')) b.addEventListener('pointerdown', e => { e.preventDefault(); if (navigator.vibrate) navigator.vibrate(15); send(b.dataset.a); soon(); if (kind === 'weather') closeSheet(); });
+    $('sheet').hidden = false;
+  };
+  const closeSheet = () => { $('sheet').hidden = true; sheetFor = ''; };
+  // Done answers a fresh touch, not a click: the sheet opens under the finger, and lifting it must not close the sheet
+  $('sh-done').addEventListener('pointerdown', e => { e.preventDefault(); closeSheet(); });
+  $('sheet').addEventListener('pointerdown', e => { if (e.target === $('sheet')) closeSheet(); });
+  const refresh = async () => {
+    try {
+      const j = await (await fetch('/api/remote/state?code=' + code, { cache: 'no-store' })).json(), s = j.state; if (!s) return;
+      last = s; if (sheetFor && !$('sheet').hidden) sheet(sheetFor);
+      if (Date.now() > holdGear) $('gear').textContent = s.gear || '–';   /* just after a shift, trust the phone's own count */ $('s-weather').textContent = s.weather || '';
+      $('s-pacer').textContent = s.pacer ? s.pacer + ' W' : 'off'; $('b-pacer').classList.toggle('live', !!s.pacer);
+      $('s-stop').textContent = s.stopped ? 'Resume' : 'Stop';
+    } catch (err) {}
+  };
+  const soon = () => { for (const ms of [450, 900, 1600]) setTimeout(refresh, ms); };
+  if (!/^[a-z0-9]{6,12}$/.test(code)) say('Open this page by scanning the code on the ride.');
+  else {
+    send('hello');
+    const fire = b => { if (navigator.vibrate) navigator.vibrate(15); if (b.dataset.a === 'gear+' || b.dataset.a === 'gear-') shiftNow(b.dataset.a === 'gear+'); b.classList.add('hit'); setTimeout(() => b.classList.remove('hit'), 140); send(b.dataset.a); soon(); };
+    // gears and Stop act the instant you touch them; a tap on Weather or Pacer opens its choices
+    for (const b of document.querySelectorAll('main button')) b.addEventListener('pointerdown', e => {
+      e.preventDefault();
+      if (b.dataset.a === 'weather' || b.dataset.a === 'pacer') { if (navigator.vibrate) navigator.vibrate(10); sheet(b.dataset.a); }
+      else fire(b);
+    });
+    soon(); setInterval(() => { if (!document.hidden) refresh(); }, 4000);
+    // keep the screen awake while the remote is open, where the phone allows it
+    const awake = () => navigator.wakeLock && navigator.wakeLock.request('screen').catch(() => {});
+    awake(); document.addEventListener('visibilitychange', () => { if (!document.hidden) awake(); });
+  }
+</script>
+</body>
+</html>
